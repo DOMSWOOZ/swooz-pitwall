@@ -4,6 +4,12 @@
 >
 > 🎮 **Built for [*Backseat Champions* on Steam](https://store.steampowered.com/app/2174510/Backseat_Champions/)** · 🕹️ **[Download & Try Live Web Demo on Itch.io](https://dom-swooz.itch.io/swooz-pitwall)**
 
+<p align="center">
+  <img src="docs/cover.gif" alt="SWOOZ PitWall Official Key Art" width="630" />
+</p>
+
+### 🖥️ Live Zero-Scroll 50Hz Telemetry Cockpit
+
 ![SWOOZ PitWall Live 50Hz Cockpit](docs/cockpit.jpg)
 
 ---
