@@ -49,6 +49,7 @@ class DemoRaceSimulator:
         self.session_time = 0.0
         self.total_laps = 18
         self.player_car = 0
+        self.public_lobby = False
         self.weather = -0.32  # Starts dry/partly cloudy, slowly drifts toward light rain mid-race
         self.weather_vel = 0.0028
 
@@ -236,9 +237,9 @@ class DemoRaceSimulator:
             return "hello", {
                 "request_id": req_id,
                 "game_version": "0.88.2-SIM",
-                "player_input": True,
-                "driver_input": True,
-                "public_lobby": False,
+                "player_input": not self.public_lobby,
+                "driver_input": not self.public_lobby,
+                "public_lobby": self.public_lobby,
                 "driver_data": True,
                 "player_data": True,
                 "decision_events": True,
@@ -249,6 +250,8 @@ class DemoRaceSimulator:
             }
         if cmd_name == "ping":
             return "ack", {"command": "ping", "request_id": req_id}
+        if self.public_lobby and cmd_name != "set_camera":
+            return "error", {"command": cmd_name, "request_id": req_id, "reason": "public_lobby"}
         if cmd_name == "set_pit":
             pcar["pit_planned"] = bool(args.get("pit", True))
             return "ack", {"command": "set_pit", "request_id": req_id}
@@ -670,9 +673,9 @@ class DemoRaceSimulator:
                 "session_type": "Race",
                 "energy": "boost",
                 "total_laps": self.total_laps,
-                "player_input": True,
-                "driver_input": True,
-                "public_lobby": False,
+                "player_input": not self.public_lobby,
+                "driver_input": not self.public_lobby,
+                "public_lobby": self.public_lobby,
                 "weather": self.weather,
                 "feature_schema_version": 12,
                 "feature_schema_hash": "0x40A5F76F",

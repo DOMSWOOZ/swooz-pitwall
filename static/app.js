@@ -175,6 +175,58 @@
     });
   }
 
+  // ==================== PUBLIC LOBBY SUITE: OBS OVERLAY, 2P CO-OP CREW & SPATIAL RADAR ====================
+  const initUrlParams = new URLSearchParams(location.search);
+  let obsOverlayActive = initUrlParams.get("obs") === "1";
+  let crewRoleActive = initUrlParams.get("role") === "crew";
+  let prevSpotterState = "CLEAR";
+  let lastSpatialBeepMs = 0;
+  let leagueHumansOnly = false;
+
+  function applySpecialRoleModes() {
+    if (obsOverlayActive) {
+      document.documentElement.dataset.obs = "1";
+      document.body.dataset.obs = "1";
+    } else {
+      delete document.documentElement.dataset.obs;
+      delete document.body.dataset.obs;
+    }
+    const obsHud = document.getElementById("obs-stream-hud");
+    if (obsHud) obsHud.style.display = obsOverlayActive ? "block" : "none";
+    const crewDock = document.getElementById("crew-chief-dock");
+    if (crewDock) crewDock.style.display = (crewRoleActive && !obsOverlayActive) ? "flex" : "none";
+  }
+
+  function playSpatialSpotterTone(panVal = 0.0, isThreeWide = false) {
+    if (!voiceEnabled || !isAudioLeader || obsOverlayActive) return;
+    const nowMs = performance.now();
+    if (nowMs - lastSpatialBeepMs < 1600) return;
+    lastSpatialBeepMs = nowMs;
+    try {
+      const ctx = ensureAudioCtx();
+      const now = ctx.currentTime;
+      const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      if (panner) panner.pan.value = Math.max(-1, Math.min(1, panVal));
+      const notes = isThreeWide ? [660, 880] : [540];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.value = freq;
+        const vol = Math.max(0.025, voiceConfig.volume * 0.09);
+        gain.gain.setValueAtTime(vol, now + idx * 0.07);
+        gain.gain.exponentialRampToValueAtTime(0.0008, now + idx * 0.07 + 0.09);
+        if (panner) {
+          osc.connect(gain).connect(panner).connect(ctx.destination);
+        } else {
+          osc.connect(gain).connect(ctx.destination);
+        }
+        osc.start(now + idx * 0.07);
+        osc.stop(now + idx * 0.07 + 0.095);
+      });
+    } catch (_) {}
+  }
+
   // ==================== BUILD 16 CIRCULAR HONEYCOMB LED SHIFT-LIGHT LENSES ====================
   function initShiftLights() {
     const box = document.getElementById("shift-led-array");
@@ -763,10 +815,11 @@
   }
 
   function sendAction(payload) {
+    const msg = (obsOverlayActive || crewRoleActive) ? { ...payload, spectator: true } : payload;
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(payload));
+      ws.send(JSON.stringify(msg));
     } else if (localSim && localSim.running) {
-      localSim.handleAction(payload);
+      localSim.handleAction(msg);
     }
   }
 
@@ -782,7 +835,8 @@
     }, 850);
 
     try {
-      ws = new WebSocket(`${proto}://${location.host}/ws`);
+      const specQs = (obsOverlayActive || crewRoleActive) ? "?spectator=1" : "";
+      ws = new WebSocket(`${proto}://${location.host}/ws${specQs}`);
     } catch (_) {
       activateStandaloneSim();
       return;
@@ -858,6 +912,8 @@
     if (!snap) return;
     renderHeaderAndShiftLights();
     renderOverlayAndMiniHud();
+    renderPublicLobbySuite();
+    if (obsOverlayActive) return;
     if (activeTab === "live") {
       renderTimingTower();
       renderTrackCanvas();
@@ -872,6 +928,257 @@
       renderTrackSpecs();
     } else if (activeTab === "stints") {
       renderLapHistoryAndLogs();
+    }
+  }
+
+  function drawProximityRadarOnCanvas(canvasId, radar) {
+    const cv = document.getElementById(canvasId);
+    if (!cv || !radar) return;
+    const ctx = cv.getContext("2d");
+    const w = cv.width, h = cv.height;
+    const cx = w / 2, cy = h * 0.54;
+    ctx.clearRect(0, 0, w, h);
+
+    // Range rings (6m & 14m)
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.22)";
+    ctx.lineWidth = 1;
+    [16, 34].forEach((r) => {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+
+    // Left / Right blind-spot warning arcs
+    if (radar.left_state && radar.left_state !== "CLEAR") {
+      ctx.strokeStyle = radar.status === "3-WIDE" ? "#ff2a2a" : "#ff9f1c";
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 37, Math.PI * 0.68, Math.PI * 1.32);
+      ctx.stroke();
+    }
+    if (radar.right_state && radar.right_state !== "CLEAR") {
+      ctx.strokeStyle = radar.status === "3-WIDE" ? "#ff2a2a" : "#ff9f1c";
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 37, -Math.PI * 0.32, Math.PI * 0.32);
+      ctx.stroke();
+    }
+
+    // Player car silhouette in center
+    ctx.fillStyle = "#ff7b00";
+    ctx.fillRect(cx - 3.5, cy - 7, 7, 14);
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - 3.5, cy - 7, 7, 14);
+
+    // Nearby rival contacts (scale: 1m lateral = 4.2px, 1m longitudinal = 2.4px)
+    for (const c of (radar.contacts || [])) {
+      const px = Math.max(6, Math.min(w - 6, cx + c.rel_x * 4.4));
+      const py = Math.max(6, Math.min(h - 6, cy - c.rel_z * 2.4));
+      ctx.fillStyle = c.threat === "OVERLAP" ? "#ff2a2a" : (c.threat === "DIVEBOMB" ? "#ffd166" : "#38bdf8");
+      ctx.beginPath();
+      ctx.arc(px, py, 4.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "700 7.5px 'Barlow Condensed', sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(drvTLA(c.name), px, py - 5.5);
+    }
+  }
+
+  function renderPublicLobbySuite() {
+    const ps = snap.public_suite || {};
+    const radar = ps.radar || { status: "CLEAR", left_state: "CLEAR", right_state: "CLEAR", contacts: [] };
+    const pubBtn = document.getElementById("btn-pub-lobby");
+    if (pubBtn) {
+      if (ps.public_lobby_locked) {
+        pubBtn.textContent = "🌐 PUBLIC SHIELD";
+        pubBtn.classList.add("pub-locked", "active");
+      } else {
+        pubBtn.textContent = "PUB SPOTTER";
+        pubBtn.classList.remove("pub-locked");
+        pubBtn.classList.toggle("active", Boolean(ps.spotter_active));
+      }
+    }
+
+    // Spatial Left/Right Ear Radar Tone on blind-spot transition
+    if (radar.status !== prevSpotterState) {
+      if (radar.status === "3-WIDE") playSpatialSpotterTone(0.0, true);
+      else if (radar.status === "CAR LEFT" || radar.status === "DIVE LEFT") playSpatialSpotterTone(-0.88, false);
+      else if (radar.status === "CAR RIGHT" || radar.status === "DIVE RIGHT") playSpatialSpotterTone(0.88, false);
+      prevSpotterState = radar.status;
+    }
+
+    const hudBox = document.getElementById("heli-radar-hud");
+    const pill = document.getElementById("radar-status-pill");
+    if (hudBox && pill) {
+      hudBox.classList.remove("warn-left", "warn-right", "warn-both");
+      pill.className = "radar-status-pill mono";
+      if (radar.status === "3-WIDE") {
+        hudBox.classList.add("warn-both");
+        pill.classList.add("crit");
+      } else if (radar.status.includes("LEFT")) {
+        hudBox.classList.add("warn-left");
+        pill.classList.add("warn");
+      } else if (radar.status.includes("RIGHT")) {
+        hudBox.classList.add("warn-right");
+        pill.classList.add("warn");
+      }
+      pill.textContent = radar.status;
+      drawProximityRadarOnCanvas("heli-radar-canvas", radar);
+    }
+
+    // Instant <2ms Public-Lobby Spotter Banner
+    const toast = document.getElementById("pub-spotter-toast");
+    const pstBadge = document.getElementById("pst-badge");
+    const pstMain = document.getElementById("pst-main");
+    if (toast && pstMain) {
+      const sc = ps.spotter_call;
+      const showToast = Boolean(sc && (ps.public_lobby_locked || !snap.copilot?.auto_card));
+      toast.style.display = showToast ? "flex" : "none";
+      if (showToast && sc) {
+        if (pstBadge) pstBadge.textContent = ps.public_lobby_locked ? "PUBLIC SPOTTER" : "SPOTTER";
+        pstMain.textContent = sc.label;
+      }
+    }
+
+    // Rival Build Spy + Camera Director
+    const spyBox = document.getElementById("rival-spy-box");
+    if (spyBox && ps.rival_spy) {
+      const renderDossier = (d, cls) => {
+        if (!d) return "";
+        const wpns = (d.weapons || []).map((w) => `<span class="spy-wpn">${w}</span>`).join(" ");
+        const strSign = d.straight_delta_pct >= 0 ? "+" : "";
+        const crnSign = d.corner_delta_pct >= 0 ? "+" : "";
+        return `<div class="spy-card ${cls}">
+          <div class="spy-top">
+            <span>${d.role}: P${d.pos} ${d.name} (${d.gap_s.toFixed(2)}s · ${d.compound[0]} ${d.tire_pct}%)</span>
+            <span>${wpns || '<span class="muted">BASE</span>'}</span>
+          </div>
+          <div class="muted">RIVAL EDGE: STR ${strSign}${d.straight_delta_pct.toFixed(1)}% · CRN ${crnSign}${d.corner_delta_pct.toFixed(1)}% · ERS ${d.energy_pct}%</div>
+          <div class="spy-tip">⚡ ${d.tip}</div>
+        </div>`;
+      };
+      const htmlSpy = renderDossier(ps.rival_spy.ahead, "ahead") + renderDossier(ps.rival_spy.behind, "behind");
+      spyBox.innerHTML = htmlSpy || `<div class="muted">Clear air ahead &amp; behind — full field telemetry active.</div>`;
+    }
+
+    const tvBtn = document.getElementById("btn-tv-director");
+    if (tvBtn) {
+      const tvOn = Boolean(ps.tv_director);
+      tvBtn.classList.toggle("active", tvOn);
+      tvBtn.textContent = tvOn ? `🎬 TV DIRECTOR: ${String(ps.active_camera || "AUTO").replace("Onboard_", "")}` : "🎬 AI TV DIRECTOR: OFF";
+    }
+    document.querySelectorAll("button[data-cam]").forEach((b) => {
+      b.classList.toggle("active", b.dataset.cam === ps.active_camera && !ps.tv_director);
+    });
+
+    // Transparent 1920x1080 OBS Studio Broadcast Overlay
+    if (obsOverlayActive) {
+      const sess = snap.session || {};
+      const tel = snap.telemetry || {};
+      const obsSess = document.getElementById("obs-session-lbl");
+      const obsPub = document.getElementById("obs-pub-tag");
+      if (obsSess) obsSess.textContent = `${String(sess.scene || "GRAND PRIX").toUpperCase()} · LAP ${tel.lap || 0}/${sess.total_laps || 0}`;
+      if (obsPub) obsPub.textContent = ps.public_lobby_locked ? "🌐 PUBLIC LOBBY" : "50HZ LIVE";
+
+      const obsTower = document.getElementById("obs-tower");
+      if (obsTower) {
+        obsTower.innerHTML = (snap.standings || []).slice(0, 10).map((c) => `
+          <div class="obs-trow ${c.is_me ? "me" : ""}">
+            <b>P${c.pos}</b>
+            <span>${drvTLA(c.name)} ${c.is_purple ? "🟣" : ""}</span>
+            <span>${c.pos === 1 ? "LDR" : `+${c.gap_to_leader.toFixed(2)}`}</span>
+            <span>${COMP_SHORT[c.compound] || "S"}</span>
+          </div>
+        `).join("");
+      }
+      const thrPct = Math.round(Math.max(0, Number(tel.pedal || 0)) * 100);
+      const brkPct = Math.round(Math.max(0, -Number(tel.pedal || 0)) * 100);
+      const ersPct = Math.round(Number(tel.energy_pct || 0));
+      const elThr = document.getElementById("obs-thr");
+      const elBrk = document.getElementById("obs-brk");
+      const elErs = document.getElementById("obs-ers");
+      if (elThr) elThr.style.width = `${thrPct}%`;
+      if (elBrk) elBrk.style.width = `${brkPct}%`;
+      if (elErs) elErs.style.width = `${ersPct}%`;
+      const elKph = document.getElementById("obs-kph");
+      const elTire = document.getElementById("obs-tire");
+      if (elKph) elKph.textContent = String(Math.round(tel.speed_kmh || 0)).padStart(3, "0");
+      if (elTire) elTire.textContent = `${COMP_SHORT[snap.tires?.current] || "S"} ${Math.round(snap.stint?.tire_health_pct || 100)}%`;
+      const obsRadLbl = document.getElementById("obs-radar-lbl");
+      if (obsRadLbl) obsRadLbl.textContent = radar.status;
+      drawProximityRadarOnCanvas("obs-radar-canvas", radar);
+      const latestR = (snap.radio || [])[0];
+      const obsToast = document.getElementById("obs-radio-toast");
+      if (obsToast && latestR?.message) {
+        obsToast.textContent = `📻 "${latestR.message}"`;
+      }
+    }
+  }
+
+  async function loadOpenGpLeague() {
+    const tbody = document.getElementById("league-standings-tbody");
+    const recBox = document.getElementById("league-records-list");
+    if (!tbody || !recBox) return;
+
+    const renderLeague = (data) => {
+      const cfg = data.config || {};
+      const hdr = document.getElementById("league-title-hdr");
+      if (hdr && cfg.league_name) hdr.textContent = `🏆 ${cfg.league_name} — ${cfg.season_tag || "PUBLIC & OPEN STANDINGS"}`;
+      const inpName = document.getElementById("inp-league-name");
+      if (inpName && !inpName.value && cfg.league_name) inpName.value = cfg.league_name;
+      const dStat = document.getElementById("league-discord-status");
+      if (dStat) dStat.textContent = data.toast || (cfg.has_discord_webhook ? "WEBHOOK LINKED ✓" : "NO WEBHOOK SET");
+
+      const rows = data.standings || [];
+      tbody.innerHTML = rows.length ? rows.map((r) => {
+        const climb = r.positions_gained >= 0 ? `<span class="pos-diff">+${r.positions_gained}</span>` : `<span class="neg-diff">${r.positions_gained}</span>`;
+        return `<tr class="${r.rank === 1 ? "row-me" : ""}">
+          <td class="mono"><b>#${r.rank}</b></td>
+          <td><b>${r.name}</b>${r.is_human ? '<span class="hum-badge">HUMAN</span>' : ""}</td>
+          <td class="mono"><b>${r.points}</b></td>
+          <td class="mono"><span class="elo-pill">${r.elo}</span></td>
+          <td class="mono">${r.races}</td>
+          <td class="mono">${r.wins} (${r.win_pct}%)</td>
+          <td class="mono">${r.podiums}</td>
+          <td class="mono">${r.fastest_laps}</td>
+          <td class="mono">P${r.avg_finish.toFixed(1)}</td>
+          <td class="mono">${climb}</td>
+          <td class="mono">${r.best_lap_s ? fmtLap(r.best_lap_s) : "—"}</td>
+        </tr>`;
+      }).join("") : `<tr><td colspan="11" class="muted">Host a Public or Custom Lobby with <code>http://127.0.0.1:8765/race-results</code> to rank drivers automatically!</td></tr>`;
+
+      const recs = data.track_records || [];
+      recBox.innerHTML = recs.length ? recs.map((rc) => `
+        <div class="rec-row">
+          <div><b>${rc.track}</b> <span class="muted">· ${rc.car_class}</span></div>
+          <div><strong style="color:#d946ef">${fmtLap(rc.best_lap_s)}</strong> <span class="muted">(${rc.driver})</span></div>
+        </div>
+      `).join("") : `<div class="muted">No lap records recorded yet.</div>`;
+    };
+
+    try {
+      const res = await fetch(`./api/league?humans=${leagueHumansOnly ? "1" : "0"}`);
+      if (!res.ok) throw new Error("Static demo");
+      renderLeague(await res.json());
+    } catch (_) {
+      renderLeague({
+        config: { league_name: "SWOOZ OPEN GP CHAMPIONSHIP", season_tag: "SEASON 1 · SHOWCASE STANDINGS", has_discord_webhook: false },
+        standings: [
+          { rank: 1, name: "Dom_Swooz", is_human: true, points: 243, elo: 1742, races: 12, wins: 8, win_pct: 66.7, podiums: 11, fastest_laps: 6, avg_finish: 1.6, positions_gained: 31, best_lap_s: 18.395 },
+          { rank: 2, name: "Thruster", is_human: true, points: 168, elo: 1638, races: 12, wins: 2, win_pct: 16.7, podiums: 8, fastest_laps: 3, avg_finish: 2.9, positions_gained: 14, best_lap_s: 18.512 },
+          { rank: 3, name: "Pole", is_human: true, points: 142, elo: 1594, races: 12, wins: 1, win_pct: 8.3, podiums: 6, fastest_laps: 2, avg_finish: 3.8, positions_gained: 9, best_lap_s: 18.640 },
+          { rank: 4, name: "Valkyrie", is_human: true, points: 119, elo: 1551, races: 11, wins: 1, win_pct: 9.1, podiums: 4, fastest_laps: 1, avg_finish: 4.5, positions_gained: 12, best_lap_s: 18.790 },
+          { rank: 5, name: "Circler", is_human: false, points: 96, elo: 1512, races: 12, wins: 0, win_pct: 0.0, podiums: 3, fastest_laps: 0, avg_finish: 5.4, positions_gained: 4, best_lap_s: 18.905 },
+        ],
+        track_records: [
+          { track: "JapanShort", car_class: "Formula", best_lap_s: 18.395, driver: "Dom_Swooz" },
+          { track: "Castellet", car_class: "ModernFormula", best_lap_s: 26.840, driver: "Dom_Swooz" },
+          { track: "LeMans_Endurance", car_class: "Endurance", best_lap_s: 100.150, driver: "Dom_Swooz" },
+          { track: "California_GP", car_class: "Formula", best_lap_s: 27.791, driver: "Dom_Swooz" },
+        ],
+      });
     }
   }
 
@@ -2141,6 +2448,7 @@
         document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b === btn));
         document.querySelectorAll(".tab-view").forEach((v) => v.classList.toggle("active", v.id === `tab-${activeTab}`));
         if (activeTab === "debrief") loadDebriefArchive();
+        if (activeTab === "league") loadOpenGpLeague();
         renderAll();
       });
     });
@@ -2650,6 +2958,55 @@
         try { localStorage.setItem("bc_device_mode", deviceModePref); } catch (_) {}
         applyDeviceMode();
         flashVoiceMatch(rawText, "VIEW: 📱 SLAB PHONE", "#btn-device-mode");
+        return true;
+      }
+      if (has("battle cam", "battle camera")) {
+        lastVoiceCmdMs = now;
+        sendAction({ action: "set_camera", camera: "Onboard_BattleCam" });
+        flashVoiceMatch(rawText, "CAM: BATTLE CAM", 'button[data-cam="Onboard_BattleCam"]');
+        return true;
+      }
+      if (has("rear view", "rear cam", "look back", "mirror cam")) {
+        lastVoiceCmdMs = now;
+        sendAction({ action: "set_camera", camera: "Onboard_Rear" });
+        flashVoiceMatch(rawText, "CAM: REAR VIEW", 'button[data-cam="Onboard_Rear"]');
+        return true;
+      }
+      if (has("trackside", "track side")) {
+        lastVoiceCmdMs = now;
+        sendAction({ action: "set_camera", camera: "TrackSide" });
+        flashVoiceMatch(rawText, "CAM: TRACKSIDE", 'button[data-cam="TrackSide"]');
+        return true;
+      }
+      if (has("drone cam", "drone view") || isExact("drone")) {
+        lastVoiceCmdMs = now;
+        sendAction({ action: "set_camera", camera: "Drone" });
+        flashVoiceMatch(rawText, "CAM: DRONE", 'button[data-cam="Drone"]');
+        return true;
+      }
+      if (has("tv director", "broadcast director", "auto camera")) {
+        lastVoiceCmdMs = now;
+        const nextTv = hasWord("off") ? false : (hasWord("on") ? true : !snap?.copilot?.tv_director);
+        sendAction({ action: "set_copilot", key: "tv_director", value: nextTv });
+        flashVoiceMatch(rawText, `TV DIRECTOR: ${nextTv ? "ON" : "OFF"}`, "#btn-tv-director");
+        return true;
+      }
+      if (has("public spotter", "public shield", "public lobby")) {
+        lastVoiceCmdMs = now;
+        document.getElementById("btn-pub-lobby")?.click();
+        flashVoiceMatch(rawText, "PUBLIC LOBBY SPOTTER", "#btn-pub-lobby");
+        return true;
+      }
+      if (has("open gp", "leaderboard", "league standings", "elo standings")) {
+        lastVoiceCmdMs = now;
+        activateTopTab("league");
+        flashVoiceMatch(rawText, "🏆 OPEN GP STANDINGS", '.tab-btn[data-tab="league"]');
+        return true;
+      }
+      if (has("rival spy", "spy and cam", "spy deck")) {
+        lastVoiceCmdMs = now;
+        activateDeck("spy");
+        flashVoiceMatch(rawText, "🕵️ RIVAL SPY & CAM", '.deck-tab[data-deck="spy"]');
         return true;
       }
       if (has("fold mode", "foldable mode", "fold view", "split view", "fold open")) {
@@ -4200,30 +4557,148 @@
       try { ensureAudioCtx(); } catch (_) {}
     }, { once: true, passive: true });
 
-    // iPhone QR & Share Modal
+    // Mobile QR · 2P Co-Op Crew Chief · Transparent OBS Stream Hub Modal & Public Lobby Controls
+    document.getElementById("btn-pub-lobby")?.addEventListener("click", () => {
+      if (snap?.connection?.simulated) {
+        sendAction({ action: "set_sim_public", public_lobby: !snap?.public_suite?.public_lobby_locked });
+      } else {
+        sendAction({ action: "set_copilot", key: "public_spotter", value: !snap?.copilot?.public_spotter });
+      }
+    });
+    document.getElementById("btn-tv-director")?.addEventListener("click", () => {
+      activateDeck("spy");
+      sendAction({ action: "set_copilot", key: "tv_director", value: !snap?.copilot?.tv_director });
+    });
+
     const qrModal = document.getElementById("qr-modal");
     const btnIphone = document.getElementById("btn-iphone-share");
     const btnCloseQr = document.getElementById("btn-close-qr");
+    let hubLinks = {
+      mobile: location.origin + location.pathname,
+      crew: `${location.origin}${location.pathname}?role=crew`,
+      obs: `${location.origin}${location.pathname}?obs=1`,
+    };
+    let activeHubMode = "mobile";
+
+    const updateHubModalUI = () => {
+      const targetUrl = hubLinks[activeHubMode] || hubLinks.mobile;
+      const urlLbl = document.getElementById("qr-url-lbl");
+      const qrImg = document.getElementById("qr-img");
+      if (urlLbl) urlLbl.textContent = targetUrl;
+      if (qrImg) qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${encodeURIComponent(targetUrl)}`;
+      document.querySelectorAll("[data-hub-mode]").forEach((b) => {
+        b.classList.toggle("active", b.dataset.hubMode === activeHubMode);
+      });
+    };
+
     if (btnIphone && qrModal) {
       btnIphone.addEventListener("click", async () => {
-        let shareUrl = location.href;
         try {
           const r = await fetch("./api/lan-info");
           if (r.ok) {
             const d = await r.json();
-            if (d.lan_url) shareUrl = d.lan_url;
+            if (d.lan_url) {
+              hubLinks = {
+                mobile: d.lan_url,
+                crew: d.crew_url || `${d.lan_url}/?role=crew`,
+                obs: d.obs_url || "http://127.0.0.1:8765/?obs=1",
+              };
+            }
           }
         } catch (_) {}
-        document.getElementById("qr-url-lbl").textContent = shareUrl;
-        document.getElementById("qr-img").src =
-          `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`;
+        updateHubModalUI();
         qrModal.style.display = "flex";
       });
     }
+    document.querySelectorAll("[data-hub-mode]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        activeHubMode = btn.dataset.hubMode || "mobile";
+        updateHubModalUI();
+      });
+    });
+    document.getElementById("btn-copy-hub-url")?.addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      const txt = document.getElementById("qr-url-lbl")?.textContent || "";
+      try {
+        await navigator.clipboard.writeText(txt);
+        btn.textContent = "✓ COPIED!";
+        setTimeout(() => { btn.textContent = "📋 COPY LINK"; }, 1400);
+      } catch (_) {}
+    });
+    document.getElementById("btn-preview-crew")?.addEventListener("click", () => {
+      crewRoleActive = !crewRoleActive;
+      obsOverlayActive = false;
+      applySpecialRoleModes();
+      if (qrModal) qrModal.style.display = "none";
+    });
+    document.getElementById("btn-preview-obs")?.addEventListener("click", () => {
+      obsOverlayActive = true;
+      applySpecialRoleModes();
+      if (qrModal) qrModal.style.display = "none";
+      if (snap) renderAll();
+    });
+    document.getElementById("btn-exit-obs")?.addEventListener("click", () => {
+      obsOverlayActive = false;
+      applySpecialRoleModes();
+      if (snap) renderAll();
+    });
     if (btnCloseQr && qrModal) {
       btnCloseQr.addEventListener("click", () => { qrModal.style.display = "none"; });
       qrModal.addEventListener("click", (e) => { if (e.target === qrModal) qrModal.style.display = "none"; });
     }
+
+    // 2P Co-Op Crew Chief Live Callout Buttons & Custom Transmit
+    document.querySelectorAll(".ccd-btn[data-crew-call]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        sendAction({ action: "crew_callout", sender: "Crew Chief", message: btn.dataset.crewCall });
+      });
+    });
+    const sendCustomCrewMsg = () => {
+      const inp = document.getElementById("inp-crew-custom");
+      const val = inp?.value?.trim();
+      if (!val) return;
+      sendAction({ action: "crew_callout", sender: "Crew Chief", message: val });
+      inp.value = "";
+    };
+    document.getElementById("btn-send-crew-custom")?.addEventListener("click", sendCustomCrewMsg);
+    document.getElementById("inp-crew-custom")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        sendCustomCrewMsg();
+      }
+    });
+
+    // Tab 5: SWOOZ Open GP League Leaderboard & Discord Webhook Controls
+    document.getElementById("btn-refresh-league")?.addEventListener("click", loadOpenGpLeague);
+    document.getElementById("btn-league-humans")?.addEventListener("click", (e) => {
+      leagueHumansOnly = !leagueHumansOnly;
+      e.currentTarget.textContent = leagueHumansOnly ? "FILTER: HUMANS ONLY" : "FILTER: ALL DRIVERS";
+      e.currentTarget.classList.toggle("active", leagueHumansOnly);
+      loadOpenGpLeague();
+    });
+    const postLeagueAction = async (actName) => {
+      const lName = document.getElementById("inp-league-name")?.value?.trim();
+      const whUrl = document.getElementById("inp-discord-webhook")?.value?.trim();
+      const payload = { action: actName };
+      if (lName) payload.league_name = lName;
+      if (whUrl) payload.discord_webhook_url = whUrl;
+      try {
+        const res = await fetch("./api/league", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        const stEl = document.getElementById("league-discord-status");
+        if (stEl && data.toast) stEl.textContent = data.toast;
+        loadOpenGpLeague();
+      } catch (_) {
+        const stEl = document.getElementById("league-discord-status");
+        if (stEl) stEl.textContent = "Run local Desktop App to save Discord Webhook";
+      }
+    };
+    document.getElementById("btn-save-league-cfg")?.addEventListener("click", () => postLeagueAction("save_config"));
+    document.getElementById("btn-test-discord")?.addEventListener("click", () => postLeagueAction("test_discord"));
 
     // Zero-Alt-Tab Ribbon Pills & Floating Mini-HUD Controls
     document.getElementById("btn-game-refocus")?.addEventListener("click", () => {
@@ -4399,6 +4874,7 @@
 
   initShiftLights();
   applyDeviceMode();
+  applySpecialRoleModes();
   bindEvents();
   connectWS();
   requestAnimationFrame(drawRadioWaveformLoop);

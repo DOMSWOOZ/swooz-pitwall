@@ -14,7 +14,21 @@
 
 ---
 
-## ✨ Highlights
+## 🌐 NEW in v2.4: Public Lobby Racing, Broadcast & Open GP Suite
+
+Built 100% within *Backseat Champions*' official Fair-Play Public Lobby API rules (zero blocked input injection — pure 50Hz read-only telemetry, sanctioned `set_camera` views, and host `POST /race-results` webhooks):
+
+- **🛡️ Automatic Public-Lobby Fair-Play Shield & `< 2 ms` Spotter Callouts** — Automatically detects `public_lobby = true`, shields blocked car/menu commands, and converts your AI Race Engineer into a zero-delay human spotter (**`"Pick 2 — Pit Speed!"`** + neon HUD banner so you tap `[1]`/`[2]`/`[3]` yourself instantly).
+- **📡 50Hz 3D Helicopter Blind-Spot Radar & Spatial Ear Spotter** — Tracks nearby cars in real-time meters (`CAR LEFT`, `CAR RIGHT`, `3-WIDE!`, `DIVEBOMB`) with directional left/right stereo ear tones (`StereoPannerNode`) to survive Turn 1 public-lobby chaos.
+- **🕵️ Live Rival Build Spy (`SPY & CAM` Deck)** — Decodes all 16 cars' live `.0001` performance ratios and ability unlocks (`SUPER BOOST`, `DRS`, `PARTY MODE`) so your engineer warns you when P2 behind unlocks Super Boost or holds a straight-line torque edge.
+- **🎬 Voice Camera Switcher & AI TV Broadcast Director (`set_camera`)** — Switch views hands-free in public lobbies (`"Battle Cam"`, `"Rear View"`, `"T-Cam"`, `"Helicopter"`) or arm **AI TV Director** for automatic broadcast camera cuts.
+- **🎥 Transparent `1920×1080` OBS Stream Overlay (`?obs=1`) & 👥 2-Player Co-Op Crew Link (`?role=crew`)** — Drop `http://127.0.0.1:8765/?obs=1` into OBS Studio for an instant transparent F1 stream HUD, or send the `?role=crew` LAN/Web link to a friend so they can transmit live Pit-Radio strategy calls directly into your headset!
+- **🏆 `SWOOZ Open GP` Elo Leaderboard, Lap Records & Discord Podium Bot** — Host any Public or Open Lobby with `http://127.0.0.1:8765/race-results` to automatically rank every driver by **Multiplayer Elo + FIA Points**, track **Circuit × Car-Class Lap Records**, and auto-post Podium embeds to Discord!
+- **📱 Dedicated Slab Smartphone & Unfolded Foldable Split-Screen Modes** — Sticky bottom Thumb Dock on narrow phones (`AUTO · SLAB`) and a 50/50 Dual-Pane Hinge Cockpit on unfolded foldables (`AUTO · FOLD`).
+
+---
+
+## ✨ Core Highlights
 
 - **⚡ Zero-Scroll 50Hz Telemetry Cockpit** — Live 16-car Timing Tower with sector deltas & compound badges, interactive Track Corridor map, 4-wheel Tire Thermal & Wear rings, G-Force meter, live Driver vs. Rival/Extreme-AI Multi-Oscilloscope (`Pedal` + `Steer`), and real-time Undercut / Pit-Rejoin Window predictor.
 - **📻 Zero-Lag Local Pit-Radio Engineer** — Powered by an offline WinRT speech daemon with pre-warmed memory cache and 90s V10 F1 radio band-pass processing (`0 ms` cloud latency, zero API keys required). Choose from multiple Race Engineer personas (**UK · Hannah**, **IE · Connor**, **US · Crew Chief**, **US · Atlas AI**).

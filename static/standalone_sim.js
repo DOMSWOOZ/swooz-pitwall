@@ -202,6 +202,8 @@
       this.fastestLapS = 27.842;
       this.fastestCar = 1;
       this.activeCamera = "Chase";
+      this.publicLobby = false;
+      this.copilot = Object.assign(this.copilot || {}, { public_spotter: true, tv_director: false });
 
       // Build 180-waypoint technical circuit
       this.N = 180;
@@ -706,8 +708,21 @@
         }
       } else if (a === "set_camera") {
         this.activeCamera = msg.camera || "Chase";
+        if (!msg.from_director) this.copilot.tv_director = false;
         this.logCmd("ACK", "set_camera", "ok");
         this.emitRadio(`Camera switched to ${this.activeCamera}.`, "INFO");
+      } else if (a === "crew_callout") {
+        const cmsg = String(msg.message || "").trim().slice(0, 180);
+        const sender = String(msg.sender || "Crew Chief").trim().slice(0, 28);
+        if (cmsg) this.emitRadio(`${sender}: ${cmsg}`, "CRITICAL");
+      } else if (a === "set_sim_public") {
+        this.publicLobby = msg.public_lobby !== undefined ? Boolean(msg.public_lobby) : !this.publicLobby;
+        if (this.publicLobby) {
+          this.copilot.public_spotter = true;
+          this.emitRadio("Public lobby mode active — auto-inputs shielded for fair play. Three-D Blind-Spot Radar, Rival Spy, Instant Card Callouts, and Camera Control are live!", "STRATEGY");
+        } else {
+          this.emitRadio("Custom lobby mode restored — full fifty-hertz Co-Pilot inputs unlocked.", "INFO");
+        }
       } else if (a === "ping") {
         this.logCmd("ACK", "ping", "ok");
         this.emitRadio("UDP telemetry ping acknowledged — 50 hertz link nominal.", "INFO");
@@ -1243,8 +1258,9 @@
           session_time: this.sessionTime,
           energy: "boost",
           total_laps: this.totalLaps,
-          player_input: true,
-          driver_input: true,
+          player_input: !this.publicLobby,
+          driver_input: !this.publicLobby,
+          public_lobby: Boolean(this.publicLobby),
           weather: this.weather,
           rain_eta_s: this.weather < 0 && this.weatherVel > 0 ? Math.abs(this.weather / this.weatherVel) : null,
           scene: "California_GP",
@@ -1402,6 +1418,65 @@
           push_active_profile: this.pushState.profile || this.copilot.push_profile || "k1_super",
         },
         loadouts: this.loadouts,
+        public_suite: (() => {
+          const tPhase = this.sessionTime * 0.65;
+          const rz1 = Math.sin(tPhase) * 7.2 - 1.8;
+          const rx1 = -2.4 + Math.cos(tPhase * 0.7) * 0.6;
+          const rz2 = -6.8 + Math.cos(tPhase * 0.85) * 4.5;
+          const rx2 = 2.6 + Math.sin(tPhase * 0.5) * 0.7;
+          const c1Overlap = Math.abs(rz1) <= 4.6;
+          const c2Overlap = Math.abs(rz2) <= 4.6;
+          let rStatus = "CLEAR";
+          if (c1Overlap && c2Overlap) rStatus = "3-WIDE";
+          else if (c1Overlap) rStatus = "CAR LEFT";
+          else if (c2Overlap) rStatus = "CAR RIGHT";
+          else if (rz2 > -11 && rz2 < -4.6) rStatus = "DIVE RIGHT";
+          const topCard = evaluatedHand.find((c) => c.recommended && !c.banned);
+          const carAhead = sorted.find((c) => c.pos === me.pos - 1) || null;
+          const carBehind = sorted.find((c) => c.pos === me.pos + 1) || sorted[1] || null;
+          return {
+            public_lobby_locked: Boolean(this.publicLobby),
+            spotter_active: Boolean(this.copilot.public_spotter !== false || this.publicLobby),
+            tv_director: Boolean(this.copilot.tv_director),
+            active_camera: this.activeCamera || "Chase",
+            radar: {
+              status: rStatus,
+              left_state: c1Overlap ? "OVERLAP" : "CLEAR",
+              right_state: c2Overlap ? "OVERLAP" : (rStatus === "DIVE RIGHT" ? "DIVE" : "CLEAR"),
+              nearest_m: Number(Math.min(Math.hypot(rx1, rz1), Math.hypot(rx2, rz2)).toFixed(1)),
+              contacts: [
+                { index: 1, name: this.cars[1].name, pos: this.cars[1].pos, kind: "remote", compound: this.cars[1].compound, rel_x: Number(rx1.toFixed(2)), rel_z: Number(rz1.toFixed(2)), dist_m: Number(Math.hypot(rx1, rz1).toFixed(1)), closing_mps: 2.4, threat: c1Overlap ? "OVERLAP" : "NEAR" },
+                { index: 2, name: this.cars[2].name, pos: this.cars[2].pos, kind: "remote", compound: this.cars[2].compound, rel_x: Number(rx2.toFixed(2)), rel_z: Number(rz2.toFixed(2)), dist_m: Number(Math.hypot(rx2, rz2).toFixed(1)), closing_mps: 4.6, threat: c2Overlap ? "OVERLAP" : (rStatus === "DIVE RIGHT" ? "DIVEBOMB" : "NEAR") },
+              ],
+            },
+            rival_spy: {
+              ahead: carAhead ? {
+                role: "AHEAD", pos: carAhead.pos, name: carAhead.name, gap_s: Number((me.intAhead || 0.62).toFixed(2)),
+                compound: carAhead.compound, tire_pct: Math.round(this.cars[carAhead.index].health * 100),
+                energy_pct: Math.round(this.cars[carAhead.index].energy * 100),
+                weapons: ["DRS", "SUPER BOOST"], straight_delta_pct: -1.8, corner_delta_pct: 0.9,
+                tip: "WE HAVE +1.8% STRAIGHT SPEED — PASS ON EXIT",
+              } : null,
+              behind: carBehind ? {
+                role: "BEHIND", pos: carBehind.pos, name: carBehind.name, gap_s: 0.58,
+                compound: carBehind.compound, tire_pct: Math.round(this.cars[carBehind.index].health * 100),
+                energy_pct: Math.round(this.cars[carBehind.index].energy * 100),
+                weapons: ["SUPER BOOST", "DRS"], straight_delta_pct: 1.6, corner_delta_pct: -1.4,
+                tip: "DANGER: SUPER BOOST LOADED — DEFEND INSIDE LINE!",
+              } : null,
+              field_unlocks: [
+                { index: 1, pos: this.cars[1].pos, name: this.cars[1].name, weapons: ["SuperBoost", "DRS"] },
+                { index: 2, pos: this.cars[2].pos, name: this.cars[2].name, weapons: ["DRS"] },
+              ],
+            },
+            spotter_call: (this.points > 0 && topCard) ? {
+              kind: "CARD",
+              slot: topCard.index + 1,
+              label: `PRESS [${topCard.index + 1}] → ${topCard.upgrade.toUpperCase()} (${topCard.ev_score} EV)`,
+              sub: topCard.reason || "",
+            } : null,
+          };
+        })(),
         overlay: { ...this.overlayCfg },
         radio: this.radioLog,
         commands: this.cmdLog,

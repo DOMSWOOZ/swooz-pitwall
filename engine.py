@@ -11,6 +11,7 @@ from typing import Any, Callable, Deque, Dict, List, Optional, Tuple
 import bc_api
 import card_strategist
 import loadout_manager
+import public_suite
 
 RESULTS_DIR_DEFAULT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "race-results")
 
@@ -144,8 +145,13 @@ class TelemetryEngine:
             "auto_boost": False,
             "auto_drive": False,
             "extreme_ai_sync": False,
+            "public_spotter": True,        # 3D Blind-Spot Radar, Spatial Spotter, Rival Spy & Instant Card Shoutouts
+            "tv_director": False,          # AI TV Broadcast Camera Director via sanctioned `set_camera`
+            "active_camera": "Chase",
         }
         self._was_auto_boosting = False
+        self._last_tv_cam = "Chase"
+        self._last_tv_switch_mono = 0.0
         self.loadout_mgr = loadout_manager.LoadoutManager()
         self.p1_blueprints: Dict[str, Any] = card_strategist.load_p1_blueprints(RESULTS_DIR_DEFAULT)
         self.extreme_ai_meta: Dict[str, Any] = card_strategist.load_extreme_ai_manifest()
@@ -242,6 +248,15 @@ class TelemetryEngine:
         self._last_tire_callout_wall = -999.0
         self.installed_counts: Dict[str, int] = {}
         self.facility_xp: Dict[str, int] = {"Speed": 0, "Cornering": 0, "Performance": 0, "Boost": 0, "Fuel": 0}
+        self.radar_state: Dict[str, Any] = {"status": "CLEAR", "left_state": "CLEAR", "right_state": "CLEAR", "nearest_m": 99.0, "contacts": []}
+        self.rival_spy_state: Dict[str, Any] = {"ahead": None, "behind": None, "field_unlocks": []}
+        self._known_rival_unlocks: Dict[int, set[str]] = {}
+        self._prev_radar_status: str = "CLEAR"
+        self._announced_public_lobby: bool = False
+
+    def is_public_lobby_locked(self) -> bool:
+        """True when Backseat Champions is in a Public Lobby (commands except ping/hello/set_camera are Fair-Play locked)."""
+        return bool(self.session_info.get("public_lobby") or self.hello_state.get("public_lobby"))
 
     def reload_p1_blueprints(self, results_dir: str = RESULTS_DIR_DEFAULT) -> None:
         self.p1_blueprints = card_strategist.load_p1_blueprints(results_dir)
@@ -421,6 +436,16 @@ class TelemetryEngine:
             mc = self.cars[self.my_car_idx]
             if self.frame % 2 == 0:
                 self.gg_trail.append((round(mc.lat_g, 3), round(mc.long_g, 3)))
+                self.radar_state = public_suite.compute_proximity_radar(self.cars, self.my_car_idx, self.num_cars)
+                st_now = self.radar_state["status"]
+                if self.copilot.get("public_spotter", True) and self.session_time > 3.5 and st_now != self._prev_radar_status:
+                    if st_now == "3-WIDE":
+                        self.emit_radio("spot_3wide", "Three wide! Hold your line!", "CRITICAL", cooldown_s=5.5)
+                    elif st_now == "DIVE LEFT":
+                        self.emit_radio("spot_divel", "Divebomb inside left!", "STRATEGY", cooldown_s=6.5)
+                    elif st_now == "DIVE RIGHT":
+                        self.emit_radio("spot_diver", "Divebomb inside right!", "STRATEGY", cooldown_s=6.5)
+                self._prev_radar_status = st_now
 
     def _on_car_telemetry(self, body: Dict[str, Any]) -> None:
         for i, t in enumerate(body["cars"]):
@@ -705,6 +730,15 @@ class TelemetryEngine:
 
     def _on_session(self, body: Dict[str, Any]) -> None:
         self.session_info = dict(body)
+        if self.is_public_lobby_locked() and not self._announced_public_lobby:
+            self._announced_public_lobby = True
+            self.copilot["public_spotter"] = True
+            self.emit_radio(
+                "pub_lobby_spotter",
+                "Public lobby active — auto-inputs shielded for fair play. Three-D Blind-Spot Radar, Rival Build Spy, Instant Card Callouts, and Camera Control are live!",
+                "STRATEGY",
+                cooldown_s=25.0,
+            )
         w = body["weather"]
         if not self.weather_samples or (self.session_time - self.weather_samples[-1][0]) >= 0.5:
             self.weather_samples.append((self.session_time, w))
@@ -742,10 +776,13 @@ class TelemetryEngine:
         if code == "TIRE":
             self.tire_screen_state = dict(body)
             rec = self.recommend_compound(body.get("allowed", bc_api.COMPOUNDS), body.get("picks_left", {}))
-            self.emit_radio("tire_open", f"Tire menu open — recommend {rec['compound']} compound.", "STRATEGY", cooldown_s=4.0)
-            if self.copilot["auto_tire"] and rec["compound"]:
-                self._last_picked_compound = rec["compound"]
-                self.send_command("pick_tire", {"compound": rec["compound"], "request_id": self.next_request_id()})
+            if self.is_public_lobby_locked():
+                self.emit_radio("tire_open", f"Tire menu open — pick {rec['compound']}!", "CRITICAL", cooldown_s=2.5)
+            else:
+                self.emit_radio("tire_open", f"Tire menu open — recommend {rec['compound']} compound.", "STRATEGY", cooldown_s=4.0)
+                if self.copilot["auto_tire"] and rec["compound"]:
+                    self._last_picked_compound = rec["compound"]
+                    self.send_command("pick_tire", {"compound": rec["compound"], "request_id": self.next_request_id()})
         elif code == "PITI":
             self.emit_radio(f"piti_{self.frame}", "In the pit lane, limiter active.", "INFO", cooldown_s=5.0)
         elif code == "PITO":
@@ -763,11 +800,26 @@ class TelemetryEngine:
             playable = [c for c in scored if not c["banned"]]
             if playable:
                 best = max(playable, key=lambda x: x["ev_score"])
-                if self.copilot["auto_card"]:
+                slot_num = int(best["index"]) + 1
+                if self.is_public_lobby_locked():
+                    self.emit_radio(
+                        f"card_pub_{self.frame}",
+                        f"Pick {slot_num} — {best['upgrade']}!",
+                        "CRITICAL",
+                        cooldown_s=1.8,
+                    )
+                elif self.copilot["auto_card"]:
                     self._last_picked_card_name = str(best["upgrade"])
                     self._last_picked_card_fac = str(best.get("facility", ""))
                     self._last_autocard_wall = time.monotonic()
                     self.send_command("pick_card", {"index": best["index"], "request_id": self.next_request_id()})
+                elif self.copilot.get("public_spotter", True):
+                    self.emit_radio(
+                        f"card_{self.frame}",
+                        f"Pick {slot_num} — {best['upgrade']}!",
+                        "STRATEGY",
+                        cooldown_s=3.5,
+                    )
                 else:
                     self.emit_radio(
                         f"card_{self.frame}",
@@ -834,7 +886,7 @@ class TelemetryEngine:
             cliff = self.compute_stint_strategy()
             cur_h = float(self.player_state.get("tire_health", 1.0))
             cliff_thr = float(self.copilot["pit_cliff_threshold"])
-            if self.copilot["auto_pit"] and body.get("can_pit"):
+            if self.copilot["auto_pit"] and body.get("can_pit") and not self.is_public_lobby_locked():
                 should_pit = (
                     bool(self.player_state.get("puncture"))
                     or (
@@ -849,6 +901,18 @@ class TelemetryEngine:
     def _on_car_abilities(self, body: Dict[str, Any]) -> None:
         for i, ab in enumerate(body["cars"]):
             self.cars[i].abilities = dict(ab)
+        if self.frame % 10 == 0 and self.my_car_idx != bc_api.NO_CAR and self.my_car_idx < self.num_cars:
+            spy_data, alerts = public_suite.compute_rival_spy(
+                self.cars,
+                self.my_car_idx,
+                self.num_cars,
+                self._known_rival_unlocks,
+                self.session_time,
+            )
+            self.rival_spy_state = spy_data
+            if self.copilot.get("public_spotter", True):
+                for key, msg in alerts:
+                    self.emit_radio(key, msg, "STRATEGY", cooldown_s=20.0)
 
     def _on_racing_line(self, body: Dict[str, Any]) -> None:
         if body["seat"] == 0:
@@ -977,14 +1041,17 @@ class TelemetryEngine:
 
         if should_pit:
             self._last_autopit_wall = now
-            self.send_command("set_pit", {"pit": True, "request_id": self.next_request_id()})
             why = f" ({undercut_reason})" if undercut_reason else ""
+            if self.is_public_lobby_locked():
+                self.emit_radio("autopit_pub", f"Spotter call: Press Pit NOW{why} — tires at {cur_h*100:.0f} percent!", "CRITICAL", cooldown_s=12.0)
+                return False
+            self.send_command("set_pit", {"pit": True, "request_id": self.next_request_id()})
             self.emit_radio("autopit_exec", f"Pit Guard armed box this lap{why} at {cur_h*100:.0f} percent tire health.", "STRATEGY", cooldown_s=12.0)
             return True
         return False
 
     def try_auto_tire(self, force: bool = False) -> bool:
-        if not self.copilot.get("auto_tire"):
+        if not self.copilot.get("auto_tire") or self.is_public_lobby_locked():
             return False
         now = time.monotonic()
         if not force and (now - self._last_autotire_wall) < 1.5:
@@ -1006,7 +1073,7 @@ class TelemetryEngine:
         return False
 
     def try_auto_card(self, force: bool = False) -> bool:
-        if not self.copilot.get("auto_card"):
+        if not self.copilot.get("auto_card") or self.is_public_lobby_locked():
             return False
         now = time.monotonic()
         if not force and (now - self._last_autocard_wall) < 0.65:
@@ -1081,7 +1148,7 @@ class TelemetryEngine:
         mode = str(self.copilot.get("pace_mode", "balanced"))
 
         # 1) Pure-Pursuit + Curvature Speed Controller (50 Hz AI Driver — Pace-Mode Tuned!)
-        if self.copilot["auto_drive"] and self.racing_line_points:
+        if self.copilot["auto_drive"] and self.racing_line_points and not self.is_public_lobby_locked():
             pts = self.racing_line_points
             cx, _, cz = mc.position_xyz
             speed_mps = max(mc.velocity_xyz[2], mc.speed_kmh / 3.6)
@@ -1200,12 +1267,28 @@ class TelemetryEngine:
                     elif mode == "hammer" and mc.energy > 0.10 and mc.pedal > 0.30:
                         buttons |= bc_api.BOOST_PARTY_MODE
 
-        if buttons != 0:
-            self._was_auto_boosting = True
-            self.send_command("boost", {"buttons": buttons, "request_id": 0})
-        elif self._was_auto_boosting:
-            self._was_auto_boosting = False
-            self.send_command("boost", {"buttons": 0, "request_id": 0})
+        if not self.is_public_lobby_locked():
+            if buttons != 0:
+                self._was_auto_boosting = True
+                self.send_command("boost", {"buttons": buttons, "request_id": 0})
+            elif self._was_auto_boosting:
+                self._was_auto_boosting = False
+                self.send_command("boost", {"buttons": 0, "request_id": 0})
+
+        # 3) Sanctioned AI TV Broadcast Camera Director (`set_camera` works in BOTH Public & Custom Lobbies!)
+        if self.copilot.get("tv_director"):
+            next_cam = public_suite.select_tv_director_camera(
+                mc,
+                self.session_time,
+                self._last_tv_cam,
+                self._last_tv_switch_mono,
+                now,
+            )
+            if next_cam is not None:
+                self._last_tv_cam = next_cam
+                self._last_tv_switch_mono = now
+                self.copilot["active_camera"] = next_cam
+                self.send_command("set_camera", {"camera": next_cam, "request_id": self.next_request_id()})
 
     # ------------------------------------------------------------------ Strategy & Analytics Models
 
@@ -1843,6 +1926,28 @@ class TelemetryEngine:
                 "yaw": round(c.yaw, 1),
             })
 
+        eval_hand = self.evaluate_cards(self.player_state.get("hand", []))
+        top_card = next((c for c in eval_hand if c.get("recommended") and not c.get("banned")), None)
+        spotter_call: Optional[Dict[str, Any]] = None
+        if int(self.player_state.get("points", 0)) > 0 and top_card is not None:
+            spotter_call = {
+                "kind": "CARD",
+                "slot": int(top_card["index"]) + 1,
+                "label": f"PRESS [{int(top_card['index']) + 1}] → {top_card['upgrade'].upper()} ({top_card['ev_score']:.0f} EV)",
+                "sub": str(top_card.get("reason") or ""),
+            }
+        elif self.tire_screen_state is not None:
+            t_rec = self.recommend_compound(
+                (self.tire_screen_state or {}).get("allowed", bc_api.COMPOUNDS),
+                self.player_state.get("compound_picks_left", {}),
+            )
+            spotter_call = {
+                "kind": "TIRE",
+                "slot": 0,
+                "label": f"TIRE MENU OPEN → SELECT {str(t_rec.get('compound', 'STANDARD')).upper()}",
+                "sub": str(t_rec.get("reason") or ""),
+            }
+
         return {
             "connection": {
                 "mode": "LIVE_UDP" if (live_connected and not self.simulated) else ("SIM_DEMO" if self.simulated else "WAITING"),
@@ -1908,7 +2013,7 @@ class TelemetryEngine:
                 "points": self.player_state.get("points", 0),
                 "upgrades_applied": self.player_state.get("upgrades_applied", 0),
                 "ban_tokens": mc.abilities.get("ban_tokens", 0),
-                "hand": self.evaluate_cards(self.player_state.get("hand", [])),
+                "hand": eval_hand,
                 "strategy": self.copilot.get("card_strategy", "p1_mimic"),
                 "facility_xp": dict(self.facility_xp),
                 "p1_blueprint": self.get_active_p1_blueprint(),
@@ -1957,6 +2062,15 @@ class TelemetryEngine:
                 "push_active_profile": self.push_state.get("profile", self.copilot.get("push_profile", "k1_super")),
             },
             "loadouts": self.loadout_mgr.get_state(),
+            "public_suite": {
+                "public_lobby_locked": self.is_public_lobby_locked(),
+                "spotter_active": bool(self.copilot.get("public_spotter", True) or self.is_public_lobby_locked()),
+                "tv_director": bool(self.copilot.get("tv_director", False)),
+                "active_camera": self.copilot.get("active_camera", "Chase"),
+                "radar": self.radar_state,
+                "rival_spy": self.rival_spy_state,
+                "spotter_call": spotter_call,
+            },
             "radio": list(self.radio_log)[:18],
             "commands": list(self.command_log)[:12],
             "events": list(self.event_log)[:18],

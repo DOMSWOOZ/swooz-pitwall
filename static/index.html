@@ -104,14 +104,16 @@
           <button class="tab-btn" data-tab="hardware">.0001 MATRIX</button>
           <button class="tab-btn" data-tab="stints">STINTS &amp; LOGS</button>
           <button class="tab-btn" data-tab="debrief">DEBRIEF</button>
+          <button class="tab-btn" data-tab="league">🏆 OPEN GP</button>
         </nav>
         <div class="hdr-btns">
           <button class="tact-pill active" id="btn-sim-toggle" title="Toggle 50Hz Demo Simulator">SIM ON</button>
           <button class="tact-pill" id="btn-sim-reset" title="Reset Demo Session">RST</button>
+          <button class="tact-pill" id="btn-pub-lobby" title="Public Lobby Fair-Play Spotter Shield (Auto-activates in Public Lobbies · Click to test Public Lobby Mode in Sim)">PUB SPOTTER</button>
           <button class="tact-pill" id="btn-mic-toggle" title="Hands-Free Pit Wall Voice Commands [Key V]">MIC OFF [V]</button>
           <button class="tact-pill active" id="btn-voice-toggle" title="Mute/Unmute Race Engineer">RADIO ON</button>
           <button class="tact-pill" id="btn-device-mode" title="Switch Cockpit Form-Factor: Auto · Slab Phone · Fold Open · Full Desktop">VIEW: AUTO</button>
-          <button class="tact-pill" id="btn-iphone-share" title="Open on iPhone / Share Link">QR</button>
+          <button class="tact-pill" id="btn-iphone-share" title="Mobile QR · 2-Player Co-Op Crew Engineer Link · Transparent OBS Stream Overlay">CREW / OBS</button>
         </div>
       </div>
     </header>
@@ -194,6 +196,16 @@
             </div>
             <div class="map-stage">
               <canvas id="track-canvas"></canvas>
+              <!-- 3D HELICOPTER BLIND-SPOT PROXIMITY RADAR (PUBLIC LOBBY SAFE!) -->
+              <div class="heli-radar-hud" id="heli-radar-hud" title="50Hz 3D Blind-Spot Proximity Radar &amp; Spatial Ear Spotter (100% Legal in Public Lobbies)">
+                <canvas id="heli-radar-canvas" width="96" height="86"></canvas>
+                <div class="radar-status-pill mono" id="radar-status-pill">CLEAR</div>
+              </div>
+              <!-- INSTANT <2MS PUBLIC-LOBBY SPOTTER CALLOUT BANNER -->
+              <div class="pub-spotter-toast mono" id="pub-spotter-toast" style="display:none">
+                <span class="pst-badge" id="pst-badge">SPOTTER</span>
+                <strong id="pst-main">PRESS [1] → PITSPEED</strong>
+              </div>
               <div class="map-floating-fastest" id="map-purple-callout" style="display:none">
                 <span>FASTEST LAP</span>
                 <strong class="mono" id="map-purple-val">—</strong>
@@ -365,6 +377,7 @@
                 <button class="deck-tab active" data-deck="delta">HARDWARE DELTA</button>
                 <button class="deck-tab" data-deck="cards">UPGRADES <span id="card-pts-badge" class="pts-pill">0</span></button>
                 <button class="deck-tab" data-deck="tires">COMPOUNDS</button>
+                <button class="deck-tab" data-deck="spy">🕵️ SPY &amp; CAM</button>
               </div>
               <span class="mono muted" id="diff-vs-label">VS P2</span>
             </div>
@@ -394,6 +407,23 @@
                 <button class="cam-btn" data-cam="Onboard_Driver">VISOR</button>
                 <button class="cam-btn" data-cam="Helicopter">HELI</button>
                 <button class="cam-btn" data-cam="next">NEXT</button>
+              </div>
+            </div>
+
+            <!-- Sub-deck D: Public-Lobby Rival Build Spy + Sanctioned Camera Director -->
+            <div class="deck-pane" id="deck-spy">
+              <div class="spy-dossier-box mono" id="rival-spy-box">
+                <div class="spy-row">Waiting for 50Hz rival telemetry…</div>
+              </div>
+              <div class="cam-director-bar">
+                <button class="cam-btn tv-dir-btn" id="btn-tv-director" title="AI TV Broadcast Camera Director — Auto-cuts between Helicopter Start, BattleCam Overtakes, T-Cam DRS &amp; TrackSide Pits (100% Allowed in Public Lobbies!)">🎬 AI TV DIRECTOR: OFF</button>
+                <button class="cam-btn" data-cam="Onboard_BattleCam" title="Wheel-to-wheel Battle Camera (Allowed in Public Lobbies!)">BATTLE CAM</button>
+                <button class="cam-btn" data-cam="Onboard_Rear" title="Instant Rear-View Check (Allowed in Public Lobbies!)">REAR VIEW</button>
+                <button class="cam-btn" data-cam="Onboard_TCam">T-CAM</button>
+                <button class="cam-btn" data-cam="Chase">CHASE</button>
+                <button class="cam-btn" data-cam="TrackSide">TRACKSIDE</button>
+                <button class="cam-btn" data-cam="Helicopter">HELI</button>
+                <button class="cam-btn" data-cam="Drone">DRONE</button>
               </div>
             </div>
           </section>
@@ -673,19 +703,140 @@
         <div id="debrief-list" class="debrief-list"></div>
       </section>
     </main>
-    <!-- IPHONE QR & SHARE MODAL -->
+
+    <!-- ========================================================= TAB 5: SWOOZ OPEN GP PUBLIC LEADERBOARD & DISCORD BOT -->
+    <main class="tab-view" id="tab-league">
+      <div class="league-grid">
+        <section class="fia-panel league-main-panel">
+          <div class="panel-hdr">
+            <h2 id="league-title-hdr">🏆 SWOOZ OPEN GP CHAMPIONSHIP — PUBLIC &amp; HOSTED ELO STANDINGS</h2>
+            <div class="hdr-meta">
+              <button class="micro-btn" id="btn-league-humans" title="Filter standings to Human Players Only vs Full Grid">FILTER: ALL DRIVERS</button>
+              <button class="micro-btn" id="btn-refresh-league">REFRESH STANDINGS</button>
+            </div>
+          </div>
+          <div class="debrief-setup-banner mono" id="league-summary-banner">
+            <strong>HOST PUBLIC LOBBY AUTO-RANKING:</strong> Add <code>http://127.0.0.1:8765/race-results</code> in <em>Settings → Telemetry → Race Results</em>. Every Public or Open Lobby you host automatically updates Elo ratings, FIA points, track records, and posts podiums to Discord!
+          </div>
+          <div class="matrix-scroll">
+            <table class="data-table league-table">
+              <thead>
+                <tr>
+                  <th>RK</th>
+                  <th>DRIVER</th>
+                  <th>PTS</th>
+                  <th>ELO</th>
+                  <th>STARTS</th>
+                  <th>WINS</th>
+                  <th>PODIUMS</th>
+                  <th>FL</th>
+                  <th>AVG FIN</th>
+                  <th>+/- CLIMB</th>
+                  <th>BEST LAP</th>
+                </tr>
+              </thead>
+              <tbody id="league-standings-tbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="league-side-stack">
+          <section class="fia-panel">
+            <div class="panel-hdr">
+              <h2>📡 DISCORD PODIUM WEBHOOK</h2>
+              <span class="mono muted" id="league-discord-status">READY</span>
+            </div>
+            <div class="league-discord-box">
+              <label class="mono muted">LEAGUE TITLE</label>
+              <input type="text" id="inp-league-name" class="ls-input" placeholder="SWOOZ OPEN GP CHAMPIONSHIP" maxlength="60" />
+              <label class="mono muted">DISCORD CHANNEL WEBHOOK URL (AUTO-POSTS PODIUM &amp; TOP 5 ELO AFTER EVERY HOSTED RACE)</label>
+              <input type="password" id="inp-discord-webhook" class="ls-input mono" placeholder="https://discord.com/api/webhooks/..." />
+              <div class="league-btn-row">
+                <button class="sw-btn play" id="btn-save-league-cfg">💾 SAVE WEBHOOK</button>
+                <button class="sw-btn" id="btn-test-discord">🚀 POST STANDINGS TO DISCORD NOW</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="fia-panel">
+            <div class="panel-hdr">
+              <h2>⏱️ CIRCUIT × CLASS LAP RECORDS</h2>
+            </div>
+            <div class="league-records-list mono" id="league-records-list"></div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <!-- 2-PLAYER CO-OP RACE ENGINEER LIVE CALLOUT DOCK (ACTIVE WHEN OPENED WITH ?role=crew) -->
+    <div class="crew-chief-dock" id="crew-chief-dock" style="display:none">
+      <div class="ccd-hdr mono">
+        <strong>👥 LIVE CO-OP RACE ENGINEER LINK</strong>
+        <span class="muted">Tap any callout below to speak directly into the Driver's F1 Radio!</span>
+      </div>
+      <div class="ccd-btns">
+        <button type="button" class="ccd-btn crit" data-crew-call="Box this lap, box box! Clean window open!">🛞 BOX THIS LAP!</button>
+        <button type="button" class="ccd-btn strat" data-crew-call="Rival pitting — push now for the undercut!">⚡ UNDERCUT PUSH!</button>
+        <button type="button" class="ccd-btn crit" data-crew-call="Defend the inside line! Rival has Super Boost behind!">🛡️ DEFEND INSIDE!</button>
+        <button type="button" class="ccd-btn strat" data-crew-call="Rain incoming on radar — prepare Wet compound!">🌧️ RAIN — WETS!</button>
+        <button type="button" class="ccd-btn" data-crew-call="Lift and coast — save tires for the final stint!">🔋 SAVE TIRES!</button>
+        <button type="button" class="ccd-btn" data-crew-call="Clear air ahead, hammer down!">🔥 HAMMER DOWN!</button>
+      </div>
+      <div class="ccd-custom-row">
+        <input type="text" id="inp-crew-custom" class="ls-input" placeholder="Type custom radio message to speak in Driver's headset..." maxlength="140" />
+        <button type="button" class="sw-btn play" id="btn-send-crew-custom">📻 TRANSMIT</button>
+      </div>
+    </div>
+
+    <!-- TRANSPARENT 1920x1080 OBS STUDIO STREAM OVERLAY (ACTIVE WHEN OPENED WITH ?obs=1) -->
+    <div class="obs-stream-hud" id="obs-stream-hud" style="display:none">
+      <div class="obs-top-badge mono">
+        <span class="obs-brand">SWOOZ PITWALL</span>
+        <span id="obs-session-lbl">CALIFORNIA GP · LAP 1/18</span>
+        <span class="obs-pub-tag" id="obs-pub-tag">50HZ LIVE</span>
+      </div>
+      <div class="obs-tower mono" id="obs-tower"></div>
+      <div class="obs-bottom-halo mono">
+        <div class="obs-pedals">
+          <div class="obs-pbar"><span class="muted">THR</span><div class="obs-pfill"><i id="obs-thr" class="g"></i></div></div>
+          <div class="obs-pbar"><span class="muted">BRK</span><div class="obs-pfill"><i id="obs-brk" class="r"></i></div></div>
+          <div class="obs-pbar"><span class="muted">ERS</span><div class="obs-pfill"><i id="obs-ers" class="c"></i></div></div>
+        </div>
+        <div class="obs-speed-core">
+          <strong id="obs-kph">000</strong>
+          <span>KPH · <b id="obs-tire">S 100%</b></span>
+        </div>
+        <div class="obs-radar-wrap">
+          <canvas id="obs-radar-canvas" width="84" height="84"></canvas>
+          <span id="obs-radar-lbl">CLEAR</span>
+        </div>
+      </div>
+      <div class="obs-radio-toast mono" id="obs-radio-toast">📻 ENG // TELEMETRY SYNCHRONIZED</div>
+      <button type="button" class="obs-exit-btn mono" id="btn-exit-obs" title="Exit OBS Preview back to Full PitWall">EXIT OBS PREVIEW</button>
+    </div>
+
+    <!-- MOBILE QR · 2-PLAYER CO-OP CREW CHIEF · OBS STREAM OVERLAY HUB MODAL -->
     <div class="qr-modal-backdrop" id="qr-modal" style="display:none">
-      <div class="fia-panel qr-modal-card">
+      <div class="fia-panel qr-modal-card" style="width:min(540px,95vw)">
         <div class="panel-hdr">
-          <h2>OPEN ON IPHONE</h2>
+          <h2>📱 MOBILE · 👥 2P CO-OP CREW · 🎥 OBS STREAM HUB</h2>
           <button class="micro-btn" id="btn-close-qr">CLOSE</button>
         </div>
         <div class="qr-modal-body">
-          <img id="qr-img" alt="Scan with iPhone Camera" width="190" height="190" />
+          <div class="hub-mode-pills">
+            <button type="button" class="sw-btn play active" data-hub-mode="mobile">📱 PHONE / FOLD</button>
+            <button type="button" class="sw-btn" data-hub-mode="crew">👥 2P CO-OP ENGINEER</button>
+            <button type="button" class="sw-btn" data-hub-mode="obs">🎥 OBS STREAM HUD</button>
+          </div>
+          <img id="qr-img" alt="Scan QR Code" width="176" height="176" />
           <div class="qr-url mono" id="qr-url-lbl">http://127.0.0.1:8765</div>
-          <p class="muted" style="text-align:center;max-width:300px">
-            <strong>Same Wi-Fi:</strong> Point iPhone Camera at QR code to stream live 50Hz PC telemetry.<br />
-            <strong>Anywhere (5G / iMessage):</strong> Deploy static folder to Vercel / Netlify Drop for a permanent 24/7 interactive demo link!
+          <div class="league-btn-row" style="justify-content:center">
+            <button type="button" class="sw-btn play" id="btn-copy-hub-url">📋 COPY LINK</button>
+            <button type="button" class="sw-btn" id="btn-preview-crew">👥 TEST CO-OP DOCK</button>
+            <button type="button" class="sw-btn" id="btn-preview-obs">🎥 PREVIEW OBS HUD</button>
+          </div>
+          <p class="muted" id="qr-hub-desc" style="text-align:center;max-width:440px">
+            <strong>Public-Lobby Ready:</strong> Scan on a Slab or Foldable phone for a 50Hz second screen, share the <b>2P Co-Op Engineer</b> link so a friend can call strategy into your headset, or paste the <b>OBS URL</b> as a <code>1920×1080</code> Browser Source!
           </p>
         </div>
       </div>

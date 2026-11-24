@@ -34,6 +34,7 @@ except ImportError:
 
 import bc_api
 import loadout_manager
+import public_suite
 import swooz_persona
 from engine import TelemetryEngine, human_speech
 from simulator import DemoRaceSimulator
@@ -691,6 +692,7 @@ class PitWallHub:
         self.engine = TelemetryEngine(self.dispatch_command)
         self.engine.on_radio_emitted = self._on_engine_radio
         os.makedirs(RESULTS_DIR, exist_ok=True)
+        self.league_mgr = public_suite.LeagueManager(RESULTS_DIR)
 
     def _build_snapshot(self) -> Dict[str, Any]:
         snap = self.engine.snapshot()
@@ -934,7 +936,57 @@ class PitWallHub:
                 if 0 <= idx < len(hand):
                     self.engine._last_picked_card_name = str(hand[idx].get("upgrade", "upgrade"))
                     self.engine._last_picked_card_fac = str(hand[idx].get("facility", ""))
+            elif action == "set_camera":
+                cam_name = str(msg.get("camera", "Chase"))
+                self.engine.copilot["active_camera"] = cam_name
+                if not msg.get("from_director"):
+                    self.engine.copilot["tv_director"] = False
+                cam_spoken = {
+                    "Onboard_BattleCam": "Battle cam.",
+                    "Onboard_Rear": "Rear view mirror.",
+                    "Onboard_TCam": "T cam.",
+                    "Onboard_Driver": "Cockpit cam.",
+                    "Onboard_TVAngle": "T V onboard.",
+                    "Chase": "Chase cam.",
+                    "Helicopter": "Helicopter cam.",
+                    "TrackSide": "Trackside cam.",
+                    "Drone": "Drone cam.",
+                    "next": "Next camera.",
+                    "previous": "Previous camera.",
+                }.get(cam_name, f"{cam_name} camera.")
+                self.engine.emit_radio(f"cam_{time.monotonic()}", cam_spoken, "INFO", cooldown_s=0.35)
             self.dispatch_command(action, msg)
+        elif action == "crew_callout":
+            crew_msg = str(msg.get("message", "")).strip()[:180]
+            crew_tag = str(msg.get("sender", "Crew Chief")).strip()[:28]
+            if crew_msg:
+                self.engine.emit_radio(
+                    f"crew_{time.monotonic()}",
+                    f"{crew_tag}: {crew_msg}",
+                    "CRITICAL",
+                    cooldown_s=0.25,
+                )
+        elif action == "set_sim_public":
+            pub_on = bool(msg.get("public_lobby", not getattr(self.sim, "public_lobby", False)))
+            self.sim.public_lobby = pub_on
+            self.engine.session_info["public_lobby"] = pub_on
+            self.engine.hello_state["public_lobby"] = pub_on
+            self.engine._announced_public_lobby = pub_on
+            if pub_on:
+                self.engine.copilot["public_spotter"] = True
+                self.engine.emit_radio(
+                    f"pubsim_{time.monotonic()}",
+                    "Public lobby mode active — auto-inputs shielded for fair play. Three-D Blind-Spot Radar, Rival Spy, Instant Card Callouts, and Camera Control are live!",
+                    "STRATEGY",
+                    cooldown_s=0.4,
+                )
+            else:
+                self.engine.emit_radio(
+                    f"pubsim_{time.monotonic()}",
+                    "Custom lobby mode restored — full fifty-hertz Co-Pilot inputs unlocked.",
+                    "INFO",
+                    cooldown_s=0.4,
+                )
         elif action == "manual_boost":
             active = bool(msg.get("active", True))
             hold = msg.get("hold")
@@ -1086,6 +1138,8 @@ class PitWallHub:
                         "auto_card": "Auto card strategist",
                         "auto_boost": "E R S auto deploy",
                         "auto_drive": "Fifty hertz A I driver",
+                        "public_spotter": "Public lobby radar and rival spy",
+                        "tv_director": "A I broadcast camera director",
                     }
                     lbl = labels.get(key, key)
                     self.engine.emit_radio(
@@ -1462,9 +1516,11 @@ class PitWallHub:
             await writer.drain()
 
             ws = WebSocketClient(writer)
+            is_spectator_ws = query_params.get("spectator") == "1"
             self.clients.add(ws)
-            self.audio_leader = ws
-            await ws.send_json({"type": "snapshot", "audio_leader": True, "data": self._build_snapshot()})
+            if not is_spectator_ws or self.audio_leader is None:
+                self.audio_leader = ws
+            await ws.send_json({"type": "snapshot", "audio_leader": ws is self.audio_leader, "data": self._build_snapshot()})
             try:
                 while not ws.closed:
                     msg_txt = await read_ws_frame(reader)
@@ -1475,7 +1531,8 @@ class PitWallHub:
                     try:
                         msg_obj = json.loads(msg_txt)
                         if isinstance(msg_obj, dict):
-                            self.audio_leader = ws
+                            if not is_spectator_ws and not msg_obj.get("spectator"):
+                                self.audio_leader = ws
                             if msg_obj.get("action") != "claim_audio":
                                 self.handle_ws_action(msg_obj)
                     except json.JSONDecodeError:
@@ -1501,9 +1558,11 @@ class PitWallHub:
             try:
                 summary = self.save_race_results_upload(headers, body)
                 self.engine.reload_p1_blueprints(RESULTS_DIR)
+                if self.league_mgr.config.get("auto_post_discord") and self.league_mgr.config.get("discord_webhook_url", "").strip():
+                    asyncio.get_running_loop().run_in_executor(None, self.league_mgr.post_to_discord, summary)
                 self.engine.emit_radio(
                     f"res_{summary['id']}",
-                    "Race weekend results uploaded and archived to Post-Race Debrief!",
+                    "Race weekend results uploaded — Open G P Leaderboard and Debrief updated!",
                     "INFO",
                     cooldown_s=1.0,
                 )
@@ -1512,11 +1571,45 @@ class PitWallHub:
                 await self._send_http(writer, 422, "text/plain", str(exc).encode("utf-8"))
             return
 
-        # 3) Saved Race Results API (/api/results)
+        # 3) Saved Race Results API (/api/results) & Open GP League Leaderboard API (/api/league)
         if method == "GET" and path == "/api/results":
             payload = json.dumps({"results": self.list_saved_results()}).encode("utf-8")
             await self._send_http(writer, 200, "application/json; charset=utf-8", payload)
             return
+
+        if path == "/api/league":
+            if method == "GET":
+                h_only = True if query_params.get("humans") == "1" else (False if query_params.get("humans") == "0" else None)
+                payload = json.dumps(self.league_mgr.build_leaderboard(humans_only=h_only)).encode("utf-8")
+                await self._send_http(writer, 200, "application/json; charset=utf-8", payload)
+                return
+            if method == "POST":
+                clen = int(headers.get("content-length", "0") or "0")
+                if clen <= 0 or clen > 64 * 1024:
+                    await self._send_http(writer, 413, "text/plain", b"Invalid size")
+                    return
+                body = await reader.readexactly(clen)
+                try:
+                    req = json.loads(body.decode("utf-8"))
+                    act = str(req.get("action", "")).strip()
+                    if act == "save_config":
+                        self.league_mgr.update_config(req)
+                        lb = self.league_mgr.build_leaderboard()
+                        lb["toast"] = "Saved League & Discord Webhook settings."
+                        await self._send_http(writer, 200, "application/json; charset=utf-8", json.dumps(lb).encode("utf-8"))
+                    elif act == "test_discord":
+                        if "discord_webhook_url" in req:
+                            self.league_mgr.update_config(req)
+                        ok, msg_txt = await asyncio.get_running_loop().run_in_executor(None, self.league_mgr.post_to_discord, None)
+                        lb = self.league_mgr.build_leaderboard()
+                        lb["discord_ok"] = ok
+                        lb["toast"] = msg_txt
+                        await self._send_http(writer, 200, "application/json; charset=utf-8", json.dumps(lb).encode("utf-8"))
+                    else:
+                        raise ValueError(f"Unknown league action: {act}")
+                except Exception as exc:
+                    await self._send_http(writer, 422, "text/plain", str(exc).encode("utf-8"))
+                return
 
         # 4) Snapshot REST fallback (/api/snapshot)
         if method == "GET" and path == "/api/snapshot":
@@ -1524,14 +1617,17 @@ class PitWallHub:
             await self._send_http(writer, 200, "application/json; charset=utf-8", payload)
             return
 
-        # 4b) Local Wi-Fi / LAN URL helper for iPhone QR scanning (/api/lan-info)
+        # 4b) Local Wi-Fi / LAN URL helper for iPhone & Co-Op Engineer QR scanning (/api/lan-info)
         if method == "GET" and path == "/api/lan-info":
             lan_ip = detect_lan_ip()
+            base_url = f"http://{lan_ip}:8765"
             payload = json.dumps({
                 "lan_ip": lan_ip,
-                "lan_url": f"http://{lan_ip}:8765",
+                "lan_url": base_url,
+                "crew_url": f"{base_url}/?role=crew",
+                "obs_url": "http://127.0.0.1:8765/?obs=1",
                 "interactive_desktop": _has_interactive_desktop(),
-                "pitwall_build": "2.3.1-clean-crew-studio",
+                "pitwall_build": "2.4.0-public-lobby-suite",
             }).encode("utf-8")
             await self._send_http(writer, 200, "application/json; charset=utf-8", payload)
             return

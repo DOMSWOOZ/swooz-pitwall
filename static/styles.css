@@ -3623,3 +3623,478 @@ body[data-device="fold"] *::-webkit-scrollbar-thumb {
   background: rgba(255, 123, 0, 0.5);
   border-radius: 3px;
 }
+body[data-device="slab"] .hdr-btns {
+  flex-wrap: wrap !important;
+}
+body[data-device="slab"] .hdr-btns .tact-pill {
+  flex: 1 1 calc(25% - 4px) !important;
+}
+
+/* =========================================================================
+   PUBLIC LOBBY RACING, BROADCAST & SWOOZ OPEN GP SUITE (v2.4)
+   ========================================================================= */
+#btn-pub-lobby.pub-locked {
+  color: #05161a !important;
+  background: linear-gradient(180deg, #38f9d7 0%, #00d2ff 100%) !important;
+  border-color: #a5f3fc !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.65);
+}
+
+/* 1) 50Hz 3D Helicopter Blind-Spot Proximity Radar inside .map-stage */
+.heli-radar-hud {
+  position: absolute;
+  top: 7px;
+  left: 8px;
+  width: 96px;
+  background: rgba(9, 11, 16, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  padding: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 9;
+  pointer-events: auto;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
+}
+.heli-radar-hud.warn-left {
+  border-color: #ff9f1c;
+  box-shadow: -4px 0 14px rgba(255, 159, 28, 0.65);
+}
+.heli-radar-hud.warn-right {
+  border-color: #ff9f1c;
+  box-shadow: 4px 0 14px rgba(255, 159, 28, 0.65);
+}
+.heli-radar-hud.warn-both {
+  border-color: #ff2a2a;
+  box-shadow: 0 0 18px rgba(255, 42, 42, 0.85);
+}
+#heli-radar-canvas {
+  width: 88px;
+  height: 82px;
+  display: block;
+}
+.radar-status-pill {
+  width: 100%;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 1px 0;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  border-radius: 3px;
+}
+.radar-status-pill.warn {
+  color: #0b0904;
+  background: linear-gradient(90deg, #ffb703, #fb8500);
+}
+.radar-status-pill.crit {
+  color: #ffffff;
+  background: linear-gradient(90deg, #ef233c, #d90429);
+}
+
+/* 2) Instant <2ms Public-Lobby Spotter Banner */
+.pub-spotter-toast {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, rgba(6, 28, 22, 0.95) 0%, rgba(12, 40, 32, 0.95) 100%);
+  border: 1.5px solid #18ff6d;
+  box-shadow: 0 0 16px rgba(24, 255, 109, 0.45);
+  color: #ffffff;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  z-index: 10;
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pst-badge {
+  background: #18ff6d;
+  color: #04130a;
+  font-weight: 900;
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+/* 3) Rival Build Spy & Sanctioned Camera Director Sub-Deck */
+#deck-spy {
+  max-height: 150px;
+  overflow-y: auto;
+}
+.spy-dossier-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 5px;
+}
+.spy-card {
+  background: #0c0f16;
+  border: 1px solid #232938;
+  border-left: 3px solid var(--papaya);
+  padding: 4px 7px;
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+.spy-card.behind {
+  border-left-color: #00e5ff;
+}
+.spy-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  color: #f8fafc;
+  font-weight: 700;
+}
+.spy-wpn {
+  background: rgba(255, 183, 3, 0.2);
+  color: #ffd166;
+  border: 1px solid rgba(255, 183, 3, 0.45);
+  padding: 0 4px;
+  font-size: 8.5px;
+  border-radius: 2px;
+}
+.spy-tip {
+  color: #38bdf8;
+  font-size: 9px;
+}
+.cam-director-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+}
+.cam-director-bar .tv-dir-btn {
+  grid-column: span 2;
+  border-color: rgba(0, 229, 255, 0.55);
+  color: #7dd3fc;
+}
+.cam-director-bar .tv-dir-btn.active {
+  background: linear-gradient(90deg, #0284c7, #00b4d8);
+  color: #ffffff;
+  border-color: #bae6fd;
+  box-shadow: 0 0 10px rgba(0, 180, 216, 0.55);
+}
+
+/* 4) Tab 5: SWOOZ Open GP Public Leaderboard & Discord Bot */
+.league-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+@media (max-width: 980px) {
+  .league-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.league-side-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.league-discord-box {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.league-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.league-records-list {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+.rec-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 8px;
+  background: #0d1017;
+  border: 1px solid #1f2533;
+  font-size: 11px;
+}
+.elo-pill {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(255, 123, 0, 0.18);
+  border: 1px solid rgba(255, 123, 0, 0.45);
+  color: #ffb74d;
+  font-weight: 800;
+}
+.hum-badge {
+  background: rgba(0, 229, 255, 0.16);
+  color: #67e8f9;
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  font-size: 9px;
+  padding: 0 4px;
+  margin-left: 4px;
+}
+.hub-mode-pills {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.hub-mode-pills .sw-btn.active {
+  border-color: #00e5ff;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.35);
+}
+
+/* 5) 2-Player Co-Op Race Engineer Callout Dock (`?role=crew`) */
+.crew-chief-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  width: min(780px, 96vw);
+  background: linear-gradient(180deg, rgba(16, 21, 32, 0.97) 0%, rgba(8, 10, 16, 0.98) 100%);
+  border: 1.5px solid #00e5ff;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.85), 0 0 18px rgba(0, 229, 255, 0.32);
+  border-radius: 8px;
+  padding: 8px 10px;
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+body[data-device="slab"] .crew-chief-dock {
+  bottom: 68px;
+}
+.ccd-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #67e8f9;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ccd-btns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+@media (max-width: 560px) {
+  .ccd-btns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.ccd-btn {
+  background: #171d2b;
+  color: #f1f5f9;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 7px 6px;
+  font-family: var(--font-race);
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ccd-btn.crit {
+  border-color: rgba(239, 68, 68, 0.7);
+  background: linear-gradient(180deg, rgba(185, 28, 28, 0.35), #171115);
+}
+.ccd-btn.strat {
+  border-color: rgba(255, 159, 28, 0.7);
+  background: linear-gradient(180deg, rgba(217, 119, 6, 0.32), #181410);
+}
+.ccd-custom-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+/* 6) Transparent 1920x1080 OBS Studio Broadcast Overlay (`?obs=1`) */
+html[data-obs="1"],
+body[data-obs="1"] {
+  background: transparent !important;
+  background-image: none !important;
+  overflow: hidden !important;
+}
+body[data-obs="1"] .side-rail,
+body[data-obs="1"] .pitwall-shell,
+body[data-obs="1"] #mini-hud-strip,
+body[data-obs="1"] #crew-chief-dock {
+  display: none !important;
+}
+body[data-obs="1"] .obs-stream-hud {
+  display: block !important;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+}
+.obs-top-badge {
+  position: absolute;
+  top: 18px;
+  right: 24px;
+  background: rgba(10, 12, 18, 0.86);
+  border: 1px solid rgba(255, 123, 0, 0.65);
+  border-left: 4px solid var(--papaya);
+  padding: 6px 14px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: #f8fafc;
+}
+.obs-brand {
+  color: var(--papaya);
+  font-weight: 900;
+}
+.obs-pub-tag {
+  background: rgba(0, 229, 255, 0.2);
+  color: #67e8f9;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.obs-tower {
+  position: absolute;
+  top: 64px;
+  left: 22px;
+  width: 248px;
+  background: rgba(9, 11, 16, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top: 3px solid var(--fia-red);
+  border-radius: 5px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11.5px;
+}
+.obs-trow {
+  display: grid;
+  grid-template-columns: 24px 1fr 56px 24px;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  color: #e2e8f0;
+}
+.obs-trow.me {
+  background: rgba(255, 123, 0, 0.28);
+  border: 1px solid rgba(255, 123, 0, 0.65);
+  color: #ffffff;
+  font-weight: 800;
+}
+.obs-bottom-halo {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(9, 11, 16, 0.88);
+  border: 1.5px solid rgba(255, 123, 0, 0.6);
+  border-radius: 10px;
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+.obs-pedals {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 115px;
+  font-size: 10px;
+}
+.obs-pbar {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  align-items: center;
+  gap: 5px;
+}
+.obs-pfill {
+  height: 7px;
+  background: #1b202c;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.obs-pfill i {
+  display: block;
+  height: 100%;
+  width: 0%;
+}
+.obs-pfill i.g { background: #18ff6d; }
+.obs-pfill i.r { background: #ff3b30; }
+.obs-pfill i.c { background: #00e5ff; }
+.obs-speed-core {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 96px;
+}
+.obs-speed-core strong {
+  font-size: 32px;
+  line-height: 1;
+  color: #ffffff;
+}
+.obs-speed-core span {
+  font-size: 10.5px;
+  color: #cbd5e1;
+}
+.obs-radar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 9.5px;
+  color: #67e8f9;
+}
+.obs-radio-toast {
+  position: absolute;
+  bottom: 132px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(12, 16, 24, 0.9);
+  border: 1px solid rgba(0, 229, 255, 0.5);
+  color: #f1f5f9;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  max-width: 680px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.obs-exit-btn {
+  pointer-events: auto;
+  position: absolute;
+  top: 18px;
+  left: 22px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #94a3b8;
+  border: 1px solid #334155;
+  padding: 4px 10px;
+  font-size: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+.obs-exit-btn:hover {
+  opacity: 1;
+  color: #ffffff;
+}

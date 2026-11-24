@@ -79,6 +79,7 @@ WHAT'S INSIDE:
         "bc_api.py",
         "card_strategist.py",
         "loadout_manager.py",
+        "public_suite.py",
         "swooz_persona.py",
         "engine.py",
         "simulator.py",
