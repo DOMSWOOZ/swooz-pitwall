@@ -125,6 +125,56 @@
     volume: Number(localStorage.getItem("bc_vol") || 88) / 100,
   };
 
+  // ==================== RESPONSIVE COCKPIT FORM-FACTOR CONTROLLER (SLAB · FOLD · DESKTOP) ====================
+  let deviceModePref = localStorage.getItem("bc_device_mode") || "auto";
+  if (!["auto", "slab", "fold", "desktop"].includes(deviceModePref)) deviceModePref = "auto";
+
+  function computeAutoDeviceMode() {
+    const w = window.innerWidth || document.documentElement.clientWidth || 1280;
+    const h = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 800);
+    const ar = w / h;
+    // Narrow bar smartphone / folded cover display
+    if (w < 600) return "slab";
+    // Unfolded foldable inner display (portrait / near-square e.g. Z Fold / Pixel Fold) or compact tablet
+    if (w <= 1180 || ar < 1.32) return "fold";
+    // Full widescreen desktop / Ultrawide broadcast cockpit
+    return "desktop";
+  }
+
+  function applyDeviceMode() {
+    const effective = deviceModePref === "auto" ? computeAutoDeviceMode() : deviceModePref;
+    document.body.dataset.device = effective;
+    const btn = document.getElementById("btn-device-mode");
+    if (btn) {
+      const shortMap = { slab: "SLAB", fold: "FOLD", desktop: "DESK" };
+      const iconMap = { slab: "📱 SLAB", fold: "📖 FOLD", desktop: "🖥️ DESK" };
+      if (deviceModePref === "auto") {
+        btn.textContent = `AUTO · ${shortMap[effective] || "DESK"}`;
+        btn.classList.remove("active");
+      } else {
+        btn.textContent = `VIEW: ${iconMap[deviceModePref] || "DESK"}`;
+        btn.classList.add("active");
+      }
+    }
+    requestAnimationFrame(() => {
+      if (snap) renderAll();
+    });
+  }
+
+  function setSlabPane(paneName) {
+    const liveEl = document.getElementById("tab-live");
+    if (!liveEl) return;
+    liveEl.dataset.slabPane = paneName;
+    document.querySelectorAll(".slab-dock-btn").forEach((b) => {
+      b.classList.toggle("active", b.dataset.slabTarget === paneName);
+    });
+    const gridEl = liveEl.querySelector(".pitwall-grid");
+    if (gridEl) gridEl.scrollTop = 0;
+    requestAnimationFrame(() => {
+      if (snap) renderAll();
+    });
+  }
+
   // ==================== BUILD 16 CIRCULAR HONEYCOMB LED SHIFT-LIGHT LENSES ====================
   function initShiftLights() {
     const box = document.getElementById("shift-led-array");
@@ -2125,6 +2175,24 @@
       sendAction({ action: "test_radio" });
     });
 
+    // Responsive Form-Factor Switcher (AUTO · SLAB · FOLD · DESKTOP) + Slab Bottom Thumb Dock
+    const devModeBtn = document.getElementById("btn-device-mode");
+    if (devModeBtn) {
+      devModeBtn.addEventListener("click", () => {
+        const order = ["auto", "slab", "fold", "desktop"];
+        deviceModePref = order[(order.indexOf(deviceModePref) + 1) % order.length];
+        try { localStorage.setItem("bc_device_mode", deviceModePref); } catch (_) {}
+        applyDeviceMode();
+      });
+    }
+    document.querySelectorAll(".slab-dock-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (btn.dataset.slabTarget) setSlabPane(btn.dataset.slabTarget);
+      });
+    });
+    window.addEventListener("resize", applyDeviceMode);
+    window.addEventListener("orientationchange", () => setTimeout(applyDeviceMode, 120));
+
     // Voice Persona & Radio FX Studio Controls
     const selVoice = document.getElementById("sel-voice-persona");
     const selFx = document.getElementById("sel-radio-fx");
@@ -2575,6 +2643,58 @@
         sendAction({ action: "set_overlay", key: "mini_hud", value: nextMh });
         flashVoiceMatch(rawText, `MINI HUD: ${nextMh ? "ON" : "OFF"}`, "#btn-mini-hud");
         return true;
+      }
+      if (has("slab mode", "phone mode", "slab view", "bar phone")) {
+        lastVoiceCmdMs = now;
+        deviceModePref = "slab";
+        try { localStorage.setItem("bc_device_mode", deviceModePref); } catch (_) {}
+        applyDeviceMode();
+        flashVoiceMatch(rawText, "VIEW: 📱 SLAB PHONE", "#btn-device-mode");
+        return true;
+      }
+      if (has("fold mode", "foldable mode", "fold view", "split view", "fold open")) {
+        lastVoiceCmdMs = now;
+        deviceModePref = "fold";
+        try { localStorage.setItem("bc_device_mode", deviceModePref); } catch (_) {}
+        applyDeviceMode();
+        flashVoiceMatch(rawText, "VIEW: 📖 FOLD SPLIT", "#btn-device-mode");
+        return true;
+      }
+      if (has("desktop mode", "desktop view", "widescreen mode")) {
+        lastVoiceCmdMs = now;
+        deviceModePref = "desktop";
+        try { localStorage.setItem("bc_device_mode", deviceModePref); } catch (_) {}
+        applyDeviceMode();
+        flashVoiceMatch(rawText, "VIEW: 🖥️ DESKTOP", "#btn-device-mode");
+        return true;
+      }
+      if (has("auto view", "auto layout", "auto screen")) {
+        lastVoiceCmdMs = now;
+        deviceModePref = "auto";
+        try { localStorage.setItem("bc_device_mode", deviceModePref); } catch (_) {}
+        applyDeviceMode();
+        flashVoiceMatch(rawText, "VIEW: AUTO DETECT", "#btn-device-mode");
+        return true;
+      }
+      if (document.body.dataset.device === "slab") {
+        if (has("engineer and radio", "engineer view", "engineer tab")) {
+          lastVoiceCmdMs = now;
+          setSlabPane("engineer");
+          flashVoiceMatch(rawText, "SLAB: ENGINEER & RADIO", '.slab-dock-btn[data-slab-target="engineer"]');
+          return true;
+        }
+        if (has("tower and map", "tower view", "track view")) {
+          lastVoiceCmdMs = now;
+          setSlabPane("track");
+          flashVoiceMatch(rawText, "SLAB: TOWER & MAP", '.slab-dock-btn[data-slab-target="track"]');
+          return true;
+        }
+        if (has("telemetry view", "telemetry tab") || isExact("telemetry")) {
+          lastVoiceCmdMs = now;
+          setSlabPane("telemetry");
+          flashVoiceMatch(rawText, "SLAB: TELEMETRY", '.slab-dock-btn[data-slab-target="telemetry"]');
+          return true;
+        }
       }
       if (has("pin top", "pin on top", "always on top", "unpin")) {
         lastVoiceCmdMs = now;
@@ -4278,6 +4398,7 @@
   }
 
   initShiftLights();
+  applyDeviceMode();
   bindEvents();
   connectWS();
   requestAnimationFrame(drawRadioWaveformLoop);

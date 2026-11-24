@@ -1861,11 +1861,19 @@ h2, .sl-label, .fia-tabs .tab-btn, .deck-tab, .ms-lbl {
 }
 
 /* =========================================================================
-   ZERO-SCROLL 100VH FULL-WINDOW COCKPIT MODE (DESKTOP >= 1221px)
-   Eliminates all dead negative space & locks every panel + radio feed inside 1 screen!
+   ZERO-SCROLL 100VH FULL-WINDOW COCKPIT MODE (TRUE WIDESCREEN DESKTOP ONLY!)
+   Guarded by min-aspect-ratio: 11/9 AND excluded when data-device is slab/fold
+   so portrait/square foldables never get trapped in a locked widescreen grid!
    ========================================================================= */
-@media (min-width: 1221px) and (min-height: 700px) {
-  html, body {
+.fold-left-pane {
+  display: contents;
+}
+.mobile-slab-dock {
+  display: none;
+}
+
+@media (min-width: 1181px) and (min-height: 660px) and (min-aspect-ratio: 11/9) {
+  html:not([data-force-mobile]), body:not([data-device="slab"]):not([data-device="fold"]) {
     height: 100vh;
     overflow: hidden;
   }
@@ -3166,4 +3174,452 @@ body.mini-hud-mode .mini-hud-strip {
   color: #f5d0fe;
   border-color: rgba(217, 0, 255, 0.55);
   background: linear-gradient(90deg, rgba(192, 38, 211, 0.18) 0%, rgba(255, 96, 26, 0.14) 100%);
+}
+
+/* =========================================================================
+   DUAL MOBILE ARCHITECTURE:
+   1) SLAB PHONE MODE (`body[data-device="slab"]` — Narrow Bar Smartphone)
+      Locked 100dvh App Shell + Sticky Bottom Thumb Dock (⚡ Engineer · 🏁 Tower · 📊 Telemetry)
+      Zero page-scroll fighting — every race control sits under your thumb!
+   2) FOLD OPEN MODE (`body[data-device="fold"]` — Unfolded Foldable / Square-Portrait)
+      True 50/50 Dual-Pane Split Cockpit across the center hinge crease
+      (Left Pane = Live Circuit Map + 16-Car Timing + Thermals; Right Pane = Stint + Switches + Radio)
+   ========================================================================= */
+
+/* --- MODE A: 📖 FOLDABLE / UNFOLDED PORTRAIT SPLIT-SCREEN (`body[data-device="fold"]`) --- */
+body[data-device="fold"] {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+}
+body[data-device="fold"] .side-rail {
+  display: none !important;
+}
+body[data-device="fold"] .pitwall-shell {
+  height: calc(100dvh - 7px) !important;
+  width: 100% !important;
+  max-width: 1120px !important;
+  margin: 0 auto !important;
+  padding: 5px 8px 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+}
+body[data-device="fold"] .topbar {
+  display: grid !important;
+  grid-template-columns: 1fr auto !important;
+  gap: 5px !important;
+  flex-shrink: 0 !important;
+}
+body[data-device="fold"] .shiftlight-housing {
+  display: none !important;
+}
+body[data-device="fold"] .top-controls {
+  flex-wrap: wrap !important;
+  justify-content: flex-end !important;
+  gap: 4px !important;
+}
+body[data-device="fold"] .session-ribbon {
+  margin: 4px 0 5px !important;
+  padding: 3px 8px !important;
+  font-size: 11px !important;
+  flex-shrink: 0 !important;
+}
+/* Hide Windows-desktop-only Win32 window focus pills on touch/fold devices */
+body[data-device="fold"] #btn-game-refocus,
+body[data-device="fold"] #btn-global-keys,
+body[data-device="fold"] #btn-pin-top,
+body[data-device="fold"] #btn-mini-hud {
+  display: none !important;
+}
+body[data-device="fold"] .tab-view.active:not(#tab-live) {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+body[data-device="fold"] #tab-live.active {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+body[data-device="fold"] #tab-live .pitwall-grid {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  display: grid !important;
+  /* 50/50 Dual-Pane Split across the foldable inner screen with 10px center hinge gutter! */
+  grid-template-columns: minmax(0, 0.97fr) minmax(0, 1.03fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+}
+body[data-device="fold"] .fold-left-pane,
+body[data-device="fold"] .right-stack {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 7px !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+  grid-column: auto !important;
+}
+/* Put Live Circuit Map + 16-Car Timing Tower right at the top of Left Fold Pane for instant zero-scroll glance! */
+body[data-device="fold"] .fold-left-pane > .center-stack {
+  display: contents !important;
+}
+body[data-device="fold"] .fold-left-pane .map-panel {
+  order: 1;
+  flex-shrink: 0 !important;
+  height: auto !important;
+}
+body[data-device="fold"] .fold-left-pane > .tower-panel {
+  order: 2;
+  height: auto !important;
+  flex-shrink: 0 !important;
+}
+body[data-device="fold"] .fold-left-pane .center-mid-split {
+  order: 3;
+  flex-shrink: 0 !important;
+}
+body[data-device="fold"] .fold-left-pane .trace-panel {
+  order: 4;
+  min-height: 155px !important;
+  height: 155px !important;
+  flex-shrink: 0 !important;
+}
+body[data-device="fold"] .map-stage {
+  height: 168px !important;
+  min-height: 168px !important;
+}
+body[data-device="fold"] .center-mid-split {
+  grid-template-columns: 1fr !important;
+  gap: 7px !important;
+}
+body[data-device="fold"] .tower-col-hdr,
+body[data-device="fold"] .fia-row {
+  grid-template-columns: 34px 1.15fr 64px 26px 62px !important;
+}
+body[data-device="fold"] .tower-col-hdr > span:nth-child(4),
+body[data-device="fold"] .fia-row > div:nth-child(4) {
+  display: none !important;
+}
+body[data-device="fold"] .stint-arc-layout {
+  grid-template-columns: 168px 1fr !important;
+  gap: 6px !important;
+}
+body[data-device="fold"] .voice-ctrl-bar {
+  grid-template-columns: 1fr 1fr !important;
+}
+body[data-device="fold"] .radio-feed {
+  max-height: 110px !important;
+}
+
+/* --- MODE B: 📱 SLAB SMARTPHONE MODE (`body[data-device="slab"]`) --- */
+body[data-device="slab"] {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+}
+body[data-device="slab"] .side-rail,
+body[data-device="slab"] .shiftlight-housing,
+body[data-device="slab"] .session-ribbon .rib-group.right {
+  display: none !important;
+}
+body[data-device="slab"] .pitwall-shell {
+  height: calc(100dvh - 7px) !important;
+  width: 100% !important;
+  max-width: 540px !important;
+  margin: 0 auto !important;
+  padding: max(4px, env(safe-area-inset-top)) 6px 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+}
+body[data-device="slab"] .tower-panel,
+body[data-device="slab"] .map-panel,
+body[data-device="slab"] .radio-panel,
+body[data-device="slab"] .trace-panel {
+  height: auto !important;
+  flex: 0 0 auto !important;
+}
+body[data-device="slab"] .map-stage {
+  height: 215px !important;
+  min-height: 215px !important;
+  flex: none !important;
+}
+body[data-device="slab"] .osc-layout {
+  height: 150px !important;
+  min-height: 150px !important;
+}
+body[data-device="slab"] .topbar {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  flex-shrink: 0 !important;
+}
+body[data-device="slab"] .brand-wing {
+  padding: 4px 8px !important;
+}
+body[data-device="slab"] .brand-meta {
+  display: none !important;
+}
+body[data-device="slab"] .top-controls {
+  padding: 4px 6px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+body[data-device="slab"] .fia-tabs,
+body[data-device="slab"] .hdr-btns {
+  width: 100% !important;
+  display: flex !important;
+  gap: 3px !important;
+}
+body[data-device="slab"] .fia-tabs .tab-btn,
+body[data-device="slab"] .hdr-btns .tact-pill {
+  flex: 1 1 0 !important;
+  padding: 6px 3px !important;
+  font-size: 10.5px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+body[data-device="slab"] .session-ribbon {
+  margin: 3px 0 4px !important;
+  padding: 3px 7px !important;
+  font-size: 10.5px !important;
+  flex-shrink: 0 !important;
+}
+body[data-device="slab"] .tab-view.active:not(#tab-live) {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding-bottom: 14px !important;
+}
+body[data-device="slab"] #tab-live.active {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+body[data-device="slab"] #tab-live .pitwall-grid {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 7px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px !important;
+}
+body[data-device="slab"] .fold-left-pane,
+body[data-device="slab"] .center-stack,
+body[data-device="slab"] .right-stack {
+  display: contents !important;
+}
+
+/* Slab Sub-Pane Visibility: Only show the active thumb-dock view so you NEVER fight a 3,000px scroll! */
+body[data-device="slab"] #tab-live[data-slab-pane="engineer"] .tower-panel,
+body[data-device="slab"] #tab-live[data-slab-pane="engineer"] .map-panel,
+body[data-device="slab"] #tab-live[data-slab-pane="engineer"] .center-mid-split,
+body[data-device="slab"] #tab-live[data-slab-pane="engineer"] .trace-panel {
+  display: none !important;
+}
+/* Order Engineer stack on Slab so Race Switches & Stint Box sit right at the top under your thumb! */
+body[data-device="slab"] #tab-live[data-slab-pane="engineer"] .switches-panel { order: 1; }
+body[data-device="slab"] #tab-live[data-slab-pane="engineer"] .stint-panel { order: 2; }
+body[data-device="slab"] #tab-live[data-slab-pane="engineer"] .comparator-panel { order: 3; }
+body[data-device="slab"] #tab-live[data-slab-pane="engineer"] .radio-panel { order: 4; }
+
+body[data-device="slab"] #tab-live[data-slab-pane="track"] .stint-panel,
+body[data-device="slab"] #tab-live[data-slab-pane="track"] .comparator-panel,
+body[data-device="slab"] #tab-live[data-slab-pane="track"] .switches-panel,
+body[data-device="slab"] #tab-live[data-slab-pane="track"] .radio-panel,
+body[data-device="slab"] #tab-live[data-slab-pane="track"] .center-mid-split,
+body[data-device="slab"] #tab-live[data-slab-pane="track"] .trace-panel {
+  display: none !important;
+}
+body[data-device="slab"] #tab-live[data-slab-pane="track"] .map-panel { order: 1; }
+body[data-device="slab"] #tab-live[data-slab-pane="track"] .tower-panel { order: 2; }
+
+body[data-device="slab"] #tab-live[data-slab-pane="telemetry"] .tower-panel,
+body[data-device="slab"] #tab-live[data-slab-pane="telemetry"] .map-panel,
+body[data-device="slab"] #tab-live[data-slab-pane="telemetry"] .stint-panel,
+body[data-device="slab"] #tab-live[data-slab-pane="telemetry"] .comparator-panel,
+body[data-device="slab"] #tab-live[data-slab-pane="telemetry"] .switches-panel,
+body[data-device="slab"] #tab-live[data-slab-pane="telemetry"] .radio-panel {
+  display: none !important;
+}
+body[data-device="slab"] #tab-live[data-slab-pane="telemetry"] .center-mid-split {
+  order: 1;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 7px !important;
+}
+body[data-device="slab"] #tab-live[data-slab-pane="telemetry"] .trace-panel {
+  order: 2;
+  min-height: 175px !important;
+}
+
+/* Sticky Bottom 3-Tab Thumb Dock on Slab Phones */
+body[data-device="slab"] .mobile-slab-dock {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 5px 4px max(7px, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, #141822 0%, #090b10 100%);
+  border-top: 1.5px solid rgba(255, 123, 0, 0.55);
+  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.75);
+  flex-shrink: 0;
+  z-index: 60;
+}
+.slab-dock-btn {
+  background: #171c28;
+  color: var(--silver);
+  border: 1px solid var(--line-mid);
+  border-radius: 5px;
+  padding: 9px 4px;
+  font-family: var(--font-race);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  text-align: center;
+}
+.slab-dock-btn.active {
+  color: #ffffff;
+  border-color: var(--papaya);
+  background: linear-gradient(180deg, rgba(255, 123, 0, 0.34) 0%, #1d120a 100%);
+  box-shadow: 0 0 12px rgba(255, 123, 0, 0.35);
+}
+
+/* Enlarge touch tap targets & fit 100% of 4-stage / 5-slot / 5-knob rows edge-to-edge on Slab & Fold */
+body[data-device="slab"] .fia-panel,
+body[data-device="fold"] .fia-panel {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+body[data-device="slab"] #cliff-hdr-lbl,
+body[data-device="fold"] #cliff-hdr-lbl {
+  display: none !important;
+}
+body[data-device="slab"] .switches-panel > .panel-hdr,
+body[data-device="fold"] .switches-panel > .panel-hdr {
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+}
+body[data-device="slab"] .pace-selector-bar,
+body[data-device="fold"] .pace-selector-bar {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 3px !important;
+  padding: 4px 6px !important;
+}
+body[data-device="slab"] .pace-seg,
+body[data-device="fold"] .pace-seg {
+  min-width: 0 !important;
+  padding: 5px 2px !important;
+}
+body[data-device="slab"] .pace-title,
+body[data-device="fold"] .pace-title {
+  font-size: 11px !important;
+}
+body[data-device="slab"] .pace-sub,
+body[data-device="fold"] .pace-sub {
+  font-size: 8px !important;
+}
+body[data-device="slab"] .metallic-switch-bank,
+body[data-device="fold"] .metallic-switch-bank {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 2px !important;
+  padding: 6px 4px !important;
+}
+body[data-device="slab"] .metal-switch-unit,
+body[data-device="fold"] .metal-switch-unit {
+  min-width: 0 !important;
+}
+body[data-device="slab"] .metal-knob,
+body[data-device="fold"] .metal-knob {
+  width: 38px !important;
+  height: 38px !important;
+}
+body[data-device="slab"] .ms-lbl,
+body[data-device="fold"] .ms-lbl {
+  font-size: 9px !important;
+  letter-spacing: 0 !important;
+}
+body[data-device="slab"] .push-profile-bar,
+body[data-device="slab"] .card-strat-bar,
+body[data-device="fold"] .push-profile-bar,
+body[data-device="fold"] .card-strat-bar {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) 24px !important;
+  gap: 2px !important;
+  padding: 0 5px 4px !important;
+}
+body[data-device="slab"] .pp-hdr,
+body[data-device="fold"] .pp-hdr {
+  display: none !important;
+}
+body[data-device="slab"] .pp-chip,
+body[data-device="slab"] .cs-chip,
+body[data-device="fold"] .pp-chip,
+body[data-device="fold"] .cs-chip {
+  min-width: 0 !important;
+  padding: 4px 1px !important;
+  font-size: 9px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+body[data-device="slab"] .briefing-pill-row,
+body[data-device="fold"] .briefing-pill-row {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 2px !important;
+  padding: 0 5px 6px !important;
+}
+body[data-device="slab"] .brief-chip,
+body[data-device="fold"] .brief-chip {
+  min-width: 0 !important;
+  font-size: 9.5px !important;
+  padding: 5px 1px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+body[data-device="slab"] .fia-box-btn,
+body[data-device="fold"] .fia-box-btn {
+  padding: 8px 10px !important;
+  font-size: 13px !important;
+}
+/* Sleek 4px Dark Carbon Motorsport Scrollbars (no 17px white Windows gutter!) */
+body[data-device="slab"] * ,
+body[data-device="fold"] * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 123, 0, 0.45) #0b0d12;
+}
+body[data-device="slab"] *::-webkit-scrollbar,
+body[data-device="fold"] *::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+body[data-device="slab"] *::-webkit-scrollbar-track,
+body[data-device="fold"] *::-webkit-scrollbar-track {
+  background: #0b0d12;
+}
+body[data-device="slab"] *::-webkit-scrollbar-thumb,
+body[data-device="fold"] *::-webkit-scrollbar-thumb {
+  background: rgba(255, 123, 0, 0.5);
+  border-radius: 3px;
 }

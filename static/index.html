@@ -110,7 +110,8 @@
           <button class="tact-pill" id="btn-sim-reset" title="Reset Demo Session">RST</button>
           <button class="tact-pill" id="btn-mic-toggle" title="Hands-Free Pit Wall Voice Commands [Key V]">MIC OFF [V]</button>
           <button class="tact-pill active" id="btn-voice-toggle" title="Mute/Unmute Race Engineer">RADIO ON</button>
-          <button class="tact-pill" id="btn-iphone-share" title="Open on iPhone / Share Link">IPHONE</button>
+          <button class="tact-pill" id="btn-device-mode" title="Switch Cockpit Form-Factor: Auto · Slab Phone · Fold Open · Full Desktop">VIEW: AUTO</button>
+          <button class="tact-pill" id="btn-iphone-share" title="Open on iPhone / Share Link">QR</button>
         </div>
       </div>
     </header>
@@ -148,8 +149,11 @@
     </div>
 
     <!-- ========================================================= TAB 1: PIT WALL LIVE -->
-    <main class="tab-view active" id="tab-live">
+    <main class="tab-view active" id="tab-live" data-slab-pane="engineer">
       <div class="pitwall-grid">
+
+        <!-- Wrapper is `display: contents` on Desktop & Slab, and becomes Left Hinge Pane on Unfolded Foldables! -->
+        <div class="fold-left-pane">
 
         <!-- ==================== LEFT COLUMN: 16-CAR FIA SLANTED TIMING TOWER ==================== -->
         <section class="fia-panel tower-panel">
@@ -317,6 +321,7 @@
           </section>
 
         </div>
+        </div><!-- /.fold-left-pane -->
 
         <!-- ==================== RIGHT COLUMN: STINT ARC GAUGE + DELTA COMPARATOR + SPUN-METAL SWITCHES + WAVEFORM RADIO ==================== -->
         <div class="right-stack">
@@ -548,6 +553,13 @@
 
         </div>
       </div>
+
+      <!-- SLAB PHONE THUMB-REACH BOTTOM SUB-DECK BAR (ZERO PAGE-SCROLL FIGHTING!) -->
+      <nav class="mobile-slab-dock" id="mobile-slab-dock" aria-label="Slab Phone Cockpit Views">
+        <button type="button" class="slab-dock-btn active" data-slab-target="engineer">⚡ ENGINEER &amp; RADIO</button>
+        <button type="button" class="slab-dock-btn" data-slab-target="track">🏁 TOWER &amp; MAP</button>
+        <button type="button" class="slab-dock-btn" data-slab-target="telemetry">📊 TELEMETRY</button>
+      </nav>
     </main>
 
     <!-- ========================================================= TAB 2: .0001 HARDWARE MATRIX -->
