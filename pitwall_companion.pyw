@@ -23,11 +23,12 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 SERVER_SCRIPT = os.path.join(ROOT_DIR, "server.py")
 APP_PROFILE_DIR = os.path.join(ROOT_DIR, ".app-profile")
 WATCHER_PID_FILE = os.path.join(ROOT_DIR, ".watcher.pid")
+WATCHER_VER_FILE = os.path.join(ROOT_DIR, ".watcher.ver")
 COMPANION_LOG = os.path.join(ROOT_DIR, "companion.log")
 
 APP_URL = "http://127.0.0.1:8765"
 HEALTH_URL = "http://127.0.0.1:8765/api/lan-info"
-REQUIRED_BUILD = "2.3.1-clean-crew-studio"
+REQUIRED_BUILD = "2.4.1-motec-obs-showcase"
 STEAM_RUN_URL = "steam://rungameid/2174510"
 WINDOW_TITLE_FRAGMENT = "SWOOZ PitWall"
 GAME_EXE_NAMES = {"backseatchampions.exe", "backseat champions.exe"}
@@ -247,6 +248,13 @@ def launch_desktop_app_window() -> None:
 
 
 def ensure_watcher_running() -> None:
+    try:
+        cur_ver = open(WATCHER_VER_FILE, encoding="utf-8").read().strip() if os.path.isfile(WATCHER_VER_FILE) else ""
+    except OSError:
+        cur_ver = ""
+    if cur_ver != REQUIRED_BUILD:
+        stop_watcher()
+        time.sleep(0.25)
     subprocess.Popen(
         [get_pythonw(), os.path.abspath(__file__), "--watch"],
         cwd=ROOT_DIR,
@@ -280,6 +288,8 @@ def run_watch_loop() -> None:
     try:
         with open(WATCHER_PID_FILE, "w", encoding="utf-8") as f:
             f.write(str(os.getpid()))
+        with open(WATCHER_VER_FILE, "w", encoding="utf-8") as f:
+            f.write(REQUIRED_BUILD)
     except OSError:
         pass
 

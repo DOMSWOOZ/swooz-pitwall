@@ -693,10 +693,13 @@ class PitWallHub:
         self.engine.on_radio_emitted = self._on_engine_radio
         os.makedirs(RESULTS_DIR, exist_ok=True)
         self.league_mgr = public_suite.LeagueManager(RESULTS_DIR)
+        self.server_boot_id = f"2.4.1-{int(time.time())}"
 
     def _build_snapshot(self) -> Dict[str, Any]:
         snap = self.engine.snapshot()
         snap["connection"]["udp_bind_error"] = self.udp_bind_error
+        snap["connection"]["pitwall_build"] = "2.4.1-motec-obs-showcase"
+        snap["connection"]["server_boot_id"] = self.server_boot_id
         snap["overlay"] = dict(self.overlay_cfg)
         return snap
 
@@ -1627,7 +1630,7 @@ class PitWallHub:
                 "crew_url": f"{base_url}/?role=crew",
                 "obs_url": "http://127.0.0.1:8765/?obs=1",
                 "interactive_desktop": _has_interactive_desktop(),
-                "pitwall_build": "2.4.0-public-lobby-suite",
+                "pitwall_build": "2.4.1-motec-obs-showcase",
             }).encode("utf-8")
             await self._send_http(writer, 200, "application/json; charset=utf-8", payload)
             return

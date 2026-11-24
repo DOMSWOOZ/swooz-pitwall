@@ -132,6 +132,8 @@
   let crewRoleActive = initUrlParams.get("role") === "crew";
   let prevSpotterState = "CLEAR";
   let lastSpatialBeepMs = 0;
+  let obsWaveUntil = 0;
+  let knownServerBootId = null;
   let leagueHumansOnly = false;
 
   let deviceModePref = localStorage.getItem("bc_device_mode") || "auto";
@@ -211,7 +213,7 @@
   }
 
   function playSpatialSpotterTone(panVal = 0.0, isThreeWide = false) {
-    if (!voiceEnabled || !isAudioLeader || obsOverlayActive) return;
+    if (!voiceEnabled || !isAudioLeader || obsOverlayActive || obsSplitPanel) return;
     const nowMs = performance.now();
     if (nowMs - lastSpatialBeepMs < 1600) return;
     lastSpatialBeepMs = nowMs;
@@ -428,7 +430,7 @@
   }
 
   function speakEngineer(msg, priority = "INFO", explicitSlotId = "") {
-    if (!voiceEnabled || !isAudioLeader) return;
+    if (!voiceEnabled || !isAudioLeader || obsOverlayActive || obsSplitPanel) return;
     const isSimOnly = Boolean((localSim && localSim.running) || snap?.connection?.simulated);
     if (isSimOnly && document.hidden) return;
     if (priority === "CRITICAL" || (priority === "STRATEGY" && radioPlaying && currentTxPriority === "INFO")) {
@@ -643,7 +645,7 @@
         radioAnalyser.getByteTimeDomainData(radioWaveData);
         engSamples = radioWaveData;
       }
-      const synthActive = now < offlineSpeakingUntil;
+      const synthActive = now < offlineSpeakingUntil || ((obsOverlayActive || obsSplitPanel) && now < obsWaveUntil);
       const engSpeaking = Boolean(engSamples || synthActive);
 
       // 2) Driver Live Microphone Channel (SWOOZ Papaya-Orange)
@@ -865,8 +867,16 @@
       try {
         const msg = JSON.parse(ev.data);
         if (msg.type === "snapshot") {
+          const bootId = msg.data?.connection?.server_boot_id || null;
+          if (bootId) {
+            if (knownServerBootId === null) knownServerBootId = bootId;
+            else if (knownServerBootId !== bootId) {
+              location.reload();
+              return;
+            }
+          }
           const wasLeader = isAudioLeader;
-          isAudioLeader = msg.audio_leader !== false;
+          isAudioLeader = msg.audio_leader !== false && !obsOverlayActive && !obsSplitPanel;
           if (wasLeader && !isAudioLeader) {
             stopAllAudioNow();
           }
@@ -2231,6 +2241,7 @@
           // Speak highest-priority or latest item cleanly without piling up duplicate updates
           const crit = fresh.find((r) => r.priority === "CRITICAL");
           const chosen = crit || fresh[fresh.length - 1];
+          obsWaveUntil = performance.now() + Math.max(1500, Math.min(4800, String(chosen.message || "").length * 62));
           speakEngineer(chosen.message, chosen.priority);
         }
       }

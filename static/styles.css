@@ -4119,10 +4119,10 @@ body[data-obs-panel="bottom"] .mobile-slab-dock {
 }
 body[data-obs-panel="right"] .pitwall-shell,
 body[data-obs-panel="bottom"] .pitwall-shell {
-  height: 100vh !important;
+  height: calc(100vh - 7px) !important;
   max-width: 100% !important;
   margin: 0 !important;
-  padding: 4px !important;
+  padding: 3px 4px !important;
   display: flex !important;
   flex-direction: column !important;
   min-height: 0 !important;
@@ -4157,7 +4157,8 @@ body[data-obs-panel="right"] #tab-live .pitwall-grid {
   min-height: 0 !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 6px !important;
+  align-items: stretch !important;
+  gap: 5px !important;
   overflow: hidden !important;
 }
 body[data-obs-panel="right"] .fold-left-pane,
@@ -4165,21 +4166,56 @@ body[data-obs-panel="right"] .center-stack,
 body[data-obs-panel="right"] .right-stack {
   display: contents !important;
 }
+body[data-obs-panel="right"] .fia-panel {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+body[data-obs-panel="right"] .panel-hdr {
+  padding: 4px 10px !important;
+}
 body[data-obs-panel="right"] .map-panel {
   order: 1;
-  flex: 1 1 190px !important;
-  min-height: 180px !important;
+  flex: 1 1 0 !important;
+  min-height: 155px !important;
   display: flex !important;
   flex-direction: column !important;
 }
 body[data-obs-panel="right"] .map-stage {
   flex: 1 1 0 !important;
   height: auto !important;
-  min-height: 145px !important;
+  min-height: 120px !important;
 }
 body[data-obs-panel="right"] .stint-panel { order: 2; flex-shrink: 0 !important; }
+body[data-obs-panel="right"] .stint-arc-layout {
+  grid-template-columns: 188px 1fr !important;
+  padding: 3px 8px 2px !important;
+  gap: 6px !important;
+}
+body[data-obs-panel="right"] .stint-side-box { gap: 3px !important; width: 100% !important; }
+body[data-obs-panel="right"] .ss-stat { padding: 2px 6px !important; }
+body[data-obs-panel="right"] .fia-box-btn { padding: 5px 8px !important; font-size: 12px !important; }
+body[data-obs-panel="right"] .stint-footer-line { padding: 2px 10px !important; font-size: 9.5px !important; }
+body[data-obs-panel="right"] .stint-traffic-line { display: none !important; }
 body[data-obs-panel="right"] .comparator-panel { order: 3; flex-shrink: 0 !important; }
+body[data-obs-panel="right"] .deck-pane { padding: 5px 8px !important; max-height: 162px !important; overflow: hidden !important; }
+body[data-obs-panel="right"] .cam-director-bar .tv-dir-btn { grid-column: span 1 !important; }
+body[data-obs-panel="right"] #deck-delta .delta-comparator-list {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 3px 10px !important;
+}
 body[data-obs-panel="right"] .switches-panel { order: 4; flex-shrink: 0 !important; }
+body[data-obs-panel="right"] .pace-selector-bar { padding: 3px 6px !important; gap: 3px !important; }
+body[data-obs-panel="right"] .pace-seg { padding: 3px 2px !important; }
+body[data-obs-panel="right"] .pace-doctrine-strip { padding: 2px 8px !important; font-size: 8.5px !important; }
+body[data-obs-panel="right"] .metallic-switch-bank { padding: 4px 6px !important; gap: 3px !important; }
+body[data-obs-panel="right"] .metal-knob { width: 31px !important; height: 31px !important; }
+body[data-obs-panel="right"] .ms-lbl { font-size: 9.5px !important; }
+body[data-obs-panel="right"] .push-profile-bar,
+body[data-obs-panel="right"] .card-strat-bar { padding: 0 6px 3px !important; gap: 3px !important; }
+body[data-obs-panel="right"] .briefing-pill-row { padding: 0 6px 4px !important; gap: 3px !important; }
 
 /* BOTTOM PANEL (1232x343): 4-Wheel Thermals + 50Hz Oscilloscope + Voice Bar & Pit-Radio */
 body[data-obs-panel="bottom"] .topbar,
@@ -4189,7 +4225,8 @@ body[data-obs-panel="bottom"] .map-panel,
 body[data-obs-panel="bottom"] .reticle-panel,
 body[data-obs-panel="bottom"] .stint-panel,
 body[data-obs-panel="bottom"] .comparator-panel,
-body[data-obs-panel="bottom"] .switches-panel {
+body[data-obs-panel="bottom"] .switches-panel,
+body[data-obs-panel="bottom"] .radio-panel .panel-hdr .hdr-meta {
   display: none !important;
 }
 body[data-obs-panel="bottom"] #tab-live.active {
@@ -4204,10 +4241,22 @@ body[data-obs-panel="bottom"] #tab-live .pitwall-grid {
   height: 100% !important;
   min-height: 0 !important;
   display: grid !important;
-  grid-template-columns: 310px minmax(0, 1.18fr) minmax(0, 1.12fr) !important;
+  grid-template-columns: 350px minmax(0, 1.15fr) minmax(0, 1.12fr) !important;
   grid-template-rows: minmax(0, 1fr) !important;
   gap: 7px !important;
   align-items: stretch !important;
+}
+body[data-obs-panel="bottom"] .thermal-quad-grid {
+  padding: 5px 7px !important;
+  gap: 5px 7px !important;
+}
+body[data-obs-panel="bottom"] .thermal-unit {
+  padding: 3px 5px !important;
+  gap: 4px !important;
+}
+body[data-obs-panel="bottom"] .patch-canvas {
+  width: 60px !important;
+  height: 48px !important;
 }
 body[data-obs-panel="bottom"] .fold-left-pane,
 body[data-obs-panel="bottom"] .center-stack,
@@ -4223,10 +4272,21 @@ body[data-obs-panel="bottom"] .radio-panel {
   display: flex !important;
   flex-direction: column !important;
 }
+body[data-obs-panel="bottom"] .thermal-quad-grid {
+  flex: 1 1 0 !important;
+  align-content: center !important;
+}
 body[data-obs-panel="bottom"] .osc-layout {
   flex: 1 1 0 !important;
   height: auto !important;
   min-height: 0 !important;
+}
+body[data-obs-panel="bottom"] .voice-ctrl-bar {
+  padding: 2px 8px !important;
+}
+body[data-obs-panel="bottom"] .waveform-box {
+  height: 64px !important;
+  flex-shrink: 0 !important;
 }
 body[data-obs-panel="bottom"] .radio-feed {
   flex: 1 1 0 !important;

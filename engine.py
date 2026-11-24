@@ -434,7 +434,7 @@ class TelemetryEngine:
 
         if self.my_car_idx != bc_api.NO_CAR and self.my_car_idx < self.num_cars:
             mc = self.cars[self.my_car_idx]
-            if self.frame % 2 == 0:
+            if self.frame % 2 == 0 or not self.radar_state.get("contacts"):
                 self.gg_trail.append((round(mc.lat_g, 3), round(mc.long_g, 3)))
                 self.radar_state = public_suite.compute_proximity_radar(self.cars, self.my_car_idx, self.num_cars)
                 st_now = self.radar_state["status"]
@@ -901,7 +901,8 @@ class TelemetryEngine:
     def _on_car_abilities(self, body: Dict[str, Any]) -> None:
         for i, ab in enumerate(body["cars"]):
             self.cars[i].abilities = dict(ab)
-        if self.frame % 10 == 0 and self.my_car_idx != bc_api.NO_CAR and self.my_car_idx < self.num_cars:
+        need_init_spy = self.rival_spy_state.get("ahead") is None and self.rival_spy_state.get("behind") is None
+        if (self.frame % 10 == 0 or need_init_spy) and self.my_car_idx != bc_api.NO_CAR and self.my_car_idx < self.num_cars:
             spy_data, alerts = public_suite.compute_rival_spy(
                 self.cars,
                 self.my_car_idx,
