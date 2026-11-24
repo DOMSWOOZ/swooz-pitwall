@@ -1,6 +1,8 @@
 # 🏎️ SWOOZ PitWall — Live 50Hz Race Engineer & Voice Comms for *Backseat Champions*
 
 > **Zero-lag local Pit-Radio Engineer, 50Hz F1-style Telemetry Cockpit, Hands-Free Voice Commands, Zero-`Alt+Tab` In-Game Hotkeys, and `80.7K`-Synced Extreme AI Strategy Co-Pilot.**
+>
+> 🎮 **Built for [*Backseat Champions* on Steam](https://store.steampowered.com/app/2174510/Backseat_Champions/)** · 🕹️ **[Download & Try Live Web Demo on Itch.io](https://dom-swooz.itch.io/swooz-pitwall)**
 
 ![SWOOZ PitWall Live 50Hz Cockpit](docs/cockpit.jpg)
 
@@ -38,7 +40,7 @@
 ### 1. Prerequisites
 - **Windows 10 / 11** (uses built-in Microsoft Edge / Chrome app-window mode + native WinRT Speech Synthesis)
 - **Python 3.10+** ([python.org](https://www.python.org/downloads/)) — standard library only for the live PitWall server (`0` third-party pip packages required to run!)
-- **Backseat Champions** on Steam
+- **Backseat Champions** on Steam → [store.steampowered.com/app/2174510/Backseat_Champions](https://store.steampowered.com/app/2174510/Backseat_Champions/)
 
 ### 2. Enable UDP Telemetry in *Backseat Champions*
 In *Backseat Champions*, open **Settings → Telemetry / API** and verify:
