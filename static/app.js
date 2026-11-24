@@ -126,6 +126,14 @@
   };
 
   // ==================== RESPONSIVE COCKPIT FORM-FACTOR CONTROLLER (SLAB · FOLD · DESKTOP) ====================
+  const initUrlParams = new URLSearchParams(location.search);
+  let obsOverlayActive = initUrlParams.get("obs") === "1";
+  let obsSplitPanel = initUrlParams.get("obs_panel") || ""; // "right" | "bottom"
+  let crewRoleActive = initUrlParams.get("role") === "crew";
+  let prevSpotterState = "CLEAR";
+  let lastSpatialBeepMs = 0;
+  let leagueHumansOnly = false;
+
   let deviceModePref = localStorage.getItem("bc_device_mode") || "auto";
   if (!["auto", "slab", "fold", "desktop"].includes(deviceModePref)) deviceModePref = "auto";
 
@@ -142,12 +150,17 @@
   }
 
   function applyDeviceMode() {
+    if (obsSplitPanel || obsOverlayActive) {
+      document.body.dataset.device = "desktop";
+      requestAnimationFrame(() => { if (snap) renderAll(); });
+      return;
+    }
     const effective = deviceModePref === "auto" ? computeAutoDeviceMode() : deviceModePref;
     document.body.dataset.device = effective;
     const btn = document.getElementById("btn-device-mode");
     if (btn) {
       const shortMap = { slab: "SLAB", fold: "FOLD", desktop: "DESK" };
-      const iconMap = { slab: "📱 SLAB", fold: "📖 FOLD", desktop: "🖥️ DESK" };
+      const iconMap = { slab: "SLAB", fold: "FOLD", desktop: "DESK" };
       if (deviceModePref === "auto") {
         btn.textContent = `AUTO · ${shortMap[effective] || "DESK"}`;
         btn.classList.remove("active");
@@ -176,13 +189,6 @@
   }
 
   // ==================== PUBLIC LOBBY SUITE: OBS OVERLAY, 2P CO-OP CREW & SPATIAL RADAR ====================
-  const initUrlParams = new URLSearchParams(location.search);
-  let obsOverlayActive = initUrlParams.get("obs") === "1";
-  let crewRoleActive = initUrlParams.get("role") === "crew";
-  let prevSpotterState = "CLEAR";
-  let lastSpatialBeepMs = 0;
-  let leagueHumansOnly = false;
-
   function applySpecialRoleModes() {
     if (obsOverlayActive) {
       document.documentElement.dataset.obs = "1";
@@ -191,10 +197,17 @@
       delete document.documentElement.dataset.obs;
       delete document.body.dataset.obs;
     }
+    if (obsSplitPanel) {
+      document.documentElement.dataset.obsPanel = obsSplitPanel;
+      document.body.dataset.obsPanel = obsSplitPanel;
+    } else {
+      delete document.documentElement.dataset.obsPanel;
+      delete document.body.dataset.obsPanel;
+    }
     const obsHud = document.getElementById("obs-stream-hud");
     if (obsHud) obsHud.style.display = obsOverlayActive ? "block" : "none";
     const crewDock = document.getElementById("crew-chief-dock");
-    if (crewDock) crewDock.style.display = (crewRoleActive && !obsOverlayActive) ? "flex" : "none";
+    if (crewDock) crewDock.style.display = (crewRoleActive && !obsOverlayActive && !obsSplitPanel) ? "flex" : "none";
   }
 
   function playSpatialSpotterTone(panVal = 0.0, isThreeWide = false) {
@@ -815,7 +828,7 @@
   }
 
   function sendAction(payload) {
-    const msg = (obsOverlayActive || crewRoleActive) ? { ...payload, spectator: true } : payload;
+    const msg = (obsOverlayActive || crewRoleActive || obsSplitPanel) ? { ...payload, spectator: true } : payload;
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(msg));
     } else if (localSim && localSim.running) {
@@ -835,7 +848,7 @@
     }, 850);
 
     try {
-      const specQs = (obsOverlayActive || crewRoleActive) ? "?spectator=1" : "";
+      const specQs = (obsOverlayActive || crewRoleActive || obsSplitPanel) ? "?spectator=1" : "";
       ws = new WebSocket(`${proto}://${location.host}/ws${specQs}`);
     } catch (_) {
       activateStandaloneSim();
@@ -992,7 +1005,7 @@
     const pubBtn = document.getElementById("btn-pub-lobby");
     if (pubBtn) {
       if (ps.public_lobby_locked) {
-        pubBtn.textContent = "🌐 PUBLIC SHIELD";
+        pubBtn.textContent = "PUB // SHIELD";
         pubBtn.classList.add("pub-locked", "active");
       } else {
         pubBtn.textContent = "PUB SPOTTER";
@@ -1056,18 +1069,24 @@
             <span>${wpns || '<span class="muted">BASE</span>'}</span>
           </div>
           <div class="muted">RIVAL EDGE: STR ${strSign}${d.straight_delta_pct.toFixed(1)}% · CRN ${crnSign}${d.corner_delta_pct.toFixed(1)}% · ERS ${d.energy_pct}%</div>
-          <div class="spy-tip">⚡ ${d.tip}</div>
+          <div class="spy-tip">▸ ${d.tip}</div>
         </div>`;
       };
       const htmlSpy = renderDossier(ps.rival_spy.ahead, "ahead") + renderDossier(ps.rival_spy.behind, "behind");
       spyBox.innerHTML = htmlSpy || `<div class="muted">Clear air ahead &amp; behind — full field telemetry active.</div>`;
     }
 
+    if (obsSplitPanel === "right") {
+      const targetDeck = (snap.cards?.points || 0) > 0 ? "cards" : "spy";
+      document.querySelectorAll(".deck-tab").forEach((t) => t.classList.toggle("active", t.dataset.deck === targetDeck));
+      document.querySelectorAll(".deck-pane").forEach((p) => p.classList.toggle("active", p.id === `deck-${targetDeck}`));
+    }
+
     const tvBtn = document.getElementById("btn-tv-director");
     if (tvBtn) {
       const tvOn = Boolean(ps.tv_director);
       tvBtn.classList.toggle("active", tvOn);
-      tvBtn.textContent = tvOn ? `🎬 TV DIRECTOR: ${String(ps.active_camera || "AUTO").replace("Onboard_", "")}` : "🎬 AI TV DIRECTOR: OFF";
+      tvBtn.textContent = tvOn ? `TV DIR // ${String(ps.active_camera || "AUTO").replace("Onboard_", "").toUpperCase()}` : "TV DIR // OFF";
     }
     document.querySelectorAll("button[data-cam]").forEach((b) => {
       b.classList.toggle("active", b.dataset.cam === ps.active_camera && !ps.tv_director);
@@ -1080,14 +1099,14 @@
       const obsSess = document.getElementById("obs-session-lbl");
       const obsPub = document.getElementById("obs-pub-tag");
       if (obsSess) obsSess.textContent = `${String(sess.scene || "GRAND PRIX").toUpperCase()} · LAP ${tel.lap || 0}/${sess.total_laps || 0}`;
-      if (obsPub) obsPub.textContent = ps.public_lobby_locked ? "🌐 PUBLIC LOBBY" : "50HZ LIVE";
+      if (obsPub) obsPub.textContent = ps.public_lobby_locked ? "PUBLIC // SHIELD" : "50HZ // LIVE";
 
       const obsTower = document.getElementById("obs-tower");
       if (obsTower) {
         obsTower.innerHTML = (snap.standings || []).slice(0, 10).map((c) => `
           <div class="obs-trow ${c.is_me ? "me" : ""}">
             <b>P${c.pos}</b>
-            <span>${drvTLA(c.name)} ${c.is_purple ? "🟣" : ""}</span>
+            <span>${drvTLA(c.name)} ${c.is_purple ? "[FL]" : ""}</span>
             <span>${c.pos === 1 ? "LDR" : `+${c.gap_to_leader.toFixed(2)}`}</span>
             <span>${COMP_SHORT[c.compound] || "S"}</span>
           </div>
@@ -1112,7 +1131,7 @@
       const latestR = (snap.radio || [])[0];
       const obsToast = document.getElementById("obs-radio-toast");
       if (obsToast && latestR?.message) {
-        obsToast.textContent = `📻 "${latestR.message}"`;
+        obsToast.textContent = `RADIO // "${latestR.message}"`;
       }
     }
   }
@@ -1125,7 +1144,7 @@
     const renderLeague = (data) => {
       const cfg = data.config || {};
       const hdr = document.getElementById("league-title-hdr");
-      if (hdr && cfg.league_name) hdr.textContent = `🏆 ${cfg.league_name} — ${cfg.season_tag || "PUBLIC & OPEN STANDINGS"}`;
+      if (hdr && cfg.league_name) hdr.textContent = `${cfg.league_name} // ${cfg.season_tag || "PUBLIC & OPEN STANDINGS"}`;
       const inpName = document.getElementById("inp-league-name");
       if (inpName && !inpName.value && cfg.league_name) inpName.value = cfg.league_name;
       const dStat = document.getElementById("league-discord-status");
@@ -1245,7 +1264,7 @@
     const pLabel = pSlot ? pSlot.label : activeProfId.toUpperCase();
     const mhPush = document.getElementById("mh-btn-push");
     if (mhPush) {
-      mhPush.textContent = `⚡ ${pLabel} [F5]`;
+      mhPush.textContent = `▸ ${pLabel} [F5]`;
       mhPush.classList.toggle("firing", Boolean(cp.push_active));
     }
     const mhBox = document.getElementById("mh-btn-box");
@@ -1259,7 +1278,7 @@
     const mhMic = document.getElementById("mh-btn-mic");
     if (mhMic) {
       mhMic.classList.toggle("active", Boolean(micEnabled));
-      mhMic.textContent = micEnabled ? "🎙 MIC ON" : "🎙 MIC OFF";
+      mhMic.textContent = micEnabled ? "MIC ON [V]" : "MIC OFF [V]";
     }
 
     const latestRadio = (snap.radio || [])[0];
@@ -1780,7 +1799,7 @@
         const kLogs = extMeta?.log_files ? `${(extMeta.log_files / 1000).toFixed(1)}K` : "80.7K";
         aiBadge.textContent = `EXTREME AI SYNC: ${kLogs} GBDT · ${p1Win.toUpperCase()} P1`;
       } else {
-        aiBadge.textContent = "SYNC EXTREME AI ⚡";
+        aiBadge.textContent = "EXTREME AI // SYNC";
       }
     }
 
@@ -1950,21 +1969,21 @@
       const activeCardSlot = (snap.loadouts?.card_slots || []).find((x) => x.id.toUpperCase() === cStrat);
       const isCastelletSlot = activeCardSlot?.base_archetype === "castellet_comms" || activeCardSlot?.label === "CASTELLET";
       if (snap.copilot?.lendurance_mode || cStrat === "LENDURANCE") {
-        p1Top.textContent = `🏆 [L'ENDURANCE P1] DOM_SWOOZ @ LE MANS (G3→P1 · +1.901s · 100.15s · 28T · 7.5% BOX / 8.6% FLAG)`;
+        p1Top.textContent = `P1 REF // [L'ENDURANCE] DOM_SWOOZ @ LE MANS (G3→P1 · +1.901s · 100.15s · 28T · 7.5% BOX / 8.6% FLAG)`;
         p1Sub.textContent = `FAC XP: SPD ${fxp.Speed || 0}/6 · CRN ${fxp.Cornering || 0}/6 · PRF ${fxp.Performance || 0}/6 · BST ${fxp.Boost || 0}/6 | 99.8% STR · 6 DRS · 15.87s PIT · BOOST TIRE`;
       } else if (isCastelletSlot) {
-        p1Top.textContent = `🟨 [CASTELLET P1 · SUPER COMMS] DOM_SWOOZ (10/10 LAPS LED · +5.257s · -26.54s PIT #1 · 37 UPG · 5x GOLDEN STACK)`;
+        p1Top.textContent = `P1 REF // [CASTELLET · SUPER COMMS] DOM_SWOOZ (10/10 LAPS LED · +5.257s · -26.54s PIT #1 · 37 UPG · 5x GOLDEN STACK)`;
         p1Sub.textContent = `FAC XP: PRF ${fxp.Performance || 0}/6 (GOLDEN) · BST ${fxp.Boost || 0}/6 · SPD ${fxp.Speed || 0}/6 | L3-7 DURA -> L8-10 GOLDEN (22.7% FLAG)`;
       } else if (bp) {
         const fs = bp.final_stats || {};
         const kw = fs.power_kw ? ` · ${fs.power_kw}kW` : "";
         const tiers = fs.total_perm_tiers ? ` · ${fs.total_perm_tiers}T` : "";
         const domTag = hp ? ` · DOM P1 ${hp.track.toUpperCase()} (+${hp.win_margin_s.toFixed(1)}s)` : "";
-        p1Top.textContent = `🏆 [${cStrat}] REF: ${bp.winner.toUpperCase()} @ ${bp.track.toUpperCase()} (G${bp.grid}→P1 · ${bp.best_lap_s.toFixed(2)}s${tiers}${kw})${domTag}`;
+        p1Top.textContent = `P1 REF // [${cStrat}] ${bp.winner.toUpperCase()} @ ${bp.track.toUpperCase()} (G${bp.grid}→P1 · ${bp.best_lap_s.toFixed(2)}s${tiers}${kw})${domTag}`;
         const topUpgs = (bp.top_upgrades || []).slice(0, 3).join(", ");
         p1Sub.textContent = `FAC XP: SPD ${fxp.Speed || 0}/6 · CRN ${fxp.Cornering || 0}/6 · PRF ${fxp.Performance || 0}/6 · BST ${fxp.Boost || 0}/6 | P1 CORE: ${topUpgs}`;
       } else {
-        p1Top.textContent = `🏆 [${cStrat}] P1 WIN-LIFT ENGINE: PitSpeed 1.87x · Duration 1.83x · Susp 1.63x · Drag 1.61x`;
+        p1Top.textContent = `P1 ENGINE // [${cStrat}] PitSpeed 1.87x · Duration 1.83x · Susp 1.63x · Drag 1.61x`;
         p1Sub.textContent = `FAC XP: SPD ${fxp.Speed || 0}/6 · CRN ${fxp.Cornering || 0}/6 · PRF ${fxp.Performance || 0}/6 · BST ${fxp.Boost || 0}/6`;
       }
     }
@@ -2125,9 +2144,9 @@
       const p1BpName = (snap.cards?.p1_blueprint?.winner || "BLITZ").toUpperCase();
       docStrip.className = `pace-doctrine-strip mono mode-${isExtAi ? "extreme" : isLend ? "lendurance" : mode}`;
       docStrip.textContent = isExtAi
-        ? `⚡ EXTREME AI 80.7K SYNC: QUAD 6/6 RUSH · 26% CLIFF · SUPER COMMS · ${p1BpName} P1 CLONE`
+        ? `EXTREME AI 80.7K // QUAD 6/6 RUSH · 26% CLIFF · SUPER COMMS · ${p1BpName} P1 CLONE`
         : isLend
-        ? "🏆 L'ENDURANCE P1: 10% DEEP CLIFF (15.87s PIT) · SLINGSHOT · BOOST TIRE · MULSANNE DRAG+BOOST"
+        ? "L'ENDURANCE P1 // 10% DEEP CLIFF (15.87s PIT) · SLINGSHOT · BOOST TIRE · MULSANNE DRAG+BOOST"
         : (PACE_DOCTRINE_INFO[mode] || PACE_DOCTRINE_INFO.balanced);
     }
 
@@ -2834,7 +2853,7 @@
         const wantOn = hasWord("on") || has("enable", "arm", "sync");
         const nextActive = wantOff ? false : (wantOn ? true : !snap?.copilot?.extreme_ai_sync);
         sendAction({ action: "set_preset", preset: "extreme_ai", active: nextActive });
-        flashVoiceMatch(rawText, nextActive ? "⚡ EXTREME AI 80.7K SYNCED" : "EXTREME AI OFF", "#btn-extreme-ai");
+        flashVoiceMatch(rawText, nextActive ? "EXTREME AI // SYNCED" : "EXTREME AI // OFF", "#btn-extreme-ai");
         return true;
       }
       if (has("lendurance", "lemans") || isExact("endurance")) {
@@ -2957,7 +2976,7 @@
         deviceModePref = "slab";
         try { localStorage.setItem("bc_device_mode", deviceModePref); } catch (_) {}
         applyDeviceMode();
-        flashVoiceMatch(rawText, "VIEW: 📱 SLAB PHONE", "#btn-device-mode");
+        flashVoiceMatch(rawText, "VIEW // SLAB", "#btn-device-mode");
         return true;
       }
       if (has("battle cam", "battle camera")) {
@@ -3000,13 +3019,13 @@
       if (has("open gp", "leaderboard", "league standings", "elo standings")) {
         lastVoiceCmdMs = now;
         activateTopTab("league");
-        flashVoiceMatch(rawText, "🏆 OPEN GP STANDINGS", '.tab-btn[data-tab="league"]');
+        flashVoiceMatch(rawText, "OPEN GP // STANDINGS", '.tab-btn[data-tab="league"]');
         return true;
       }
       if (has("rival spy", "spy and cam", "spy deck")) {
         lastVoiceCmdMs = now;
         activateDeck("spy");
-        flashVoiceMatch(rawText, "🕵️ RIVAL SPY & CAM", '.deck-tab[data-deck="spy"]');
+        flashVoiceMatch(rawText, "SPY // CAM", '.deck-tab[data-deck="spy"]');
         return true;
       }
       if (has("fold mode", "foldable mode", "fold view", "split view", "fold open")) {
@@ -3014,7 +3033,7 @@
         deviceModePref = "fold";
         try { localStorage.setItem("bc_device_mode", deviceModePref); } catch (_) {}
         applyDeviceMode();
-        flashVoiceMatch(rawText, "VIEW: 📖 FOLD SPLIT", "#btn-device-mode");
+        flashVoiceMatch(rawText, "VIEW // FOLD", "#btn-device-mode");
         return true;
       }
       if (has("desktop mode", "desktop view", "widescreen mode")) {
@@ -3022,7 +3041,7 @@
         deviceModePref = "desktop";
         try { localStorage.setItem("bc_device_mode", deviceModePref); } catch (_) {}
         applyDeviceMode();
-        flashVoiceMatch(rawText, "VIEW: 🖥️ DESKTOP", "#btn-device-mode");
+        flashVoiceMatch(rawText, "VIEW // DESKTOP", "#btn-device-mode");
         return true;
       }
       if (has("auto view", "auto layout", "auto screen")) {
@@ -3734,7 +3753,7 @@
         ];
         pEdit.innerHTML = `
           <div class="ls-telemetry-banner mono">
-            <span>🎙️ VOICE TRIGGER: <b>"${escAttr(ps.label)}"</b></span>
+            <span>VOICE TRIGGER // <b>"${escAttr(ps.label)}"</b></span>
             <span>50HZ GATE: <b>&le;${steerDeg}&deg; STEER</b> · <b>&ge;${Math.round(ps.min_pedal * 100)}% THR</b> · <b>${Math.round(ps.energy_floor * 100)}% ERS FLOOR</b></span>
           </div>
           <div class="ls-form-grid">
@@ -3772,7 +3791,7 @@
           <div class="ls-actions-row">
             <button class="sw-btn" id="btn-lsp-reset">↺ RESET SLOT ${lsActivePushIdx + 1} TO DEFAULT</button>
             <div style="display:flex;gap:6px">
-              <button class="sw-btn play" id="btn-lsp-save">💾 SAVE PUSH SLOT ${lsActivePushIdx + 1}</button>
+              <button class="sw-btn play" id="btn-lsp-save">SAVE PUSH SLOT ${lsActivePushIdx + 1}</button>
               <button class="micro-btn swooz-rec-btn" id="btn-lsp-arm">SAVE &amp; ARM ON PIT WALL</button>
             </div>
           </div>
@@ -3808,12 +3827,12 @@
         const nAvoid = (cs.avoid_upgrades || []).length;
         cEdit.innerHTML = `
           <div class="ls-telemetry-banner mono">
-            <span>🎙️ VOICE TRIGGER: <b>"${escAttr(cs.label)}"</b></span>
+            <span>VOICE TRIGGER // <b>"${escAttr(cs.label)}"</b></span>
             <span>BLUEPRINT: <b>${nFac}/3 RUSH</b> · <b>${nPrio}/7 CORE (+28 EV)</b> · <b>${nLate}/4 CLOSER</b> · <b>${nAvoid}/5 BAN</b></span>
           </div>
           ${archives.length ? `
           <div class="ls-import-row mono">
-            <strong style="color:#ffd15c">🏆 1-CLICK IMPORT FROM P1 RACE ARCHIVE:</strong>
+            <strong style="color:#ffd15c">IMPORT FROM P1 RACE ARCHIVE:</strong>
             <select id="lsc-archive-sel" class="voice-select" style="flex:1;min-width:200px">
               ${archives.map((a) => `<option value="${escAttr(a.archive)}">${escAttr(a.track)} — P1 ${escAttr(a.winner)} (G${a.grid}→P1 · +${Number(a.win_margin_s || 0).toFixed(2)}s)</option>`).join("")}
             </select>
@@ -3866,7 +3885,7 @@
           <div class="ls-actions-row">
             <button class="sw-btn" id="btn-lsc-reset">↺ RESET SLOT ${lsActiveCardIdx + 1} TO DEFAULT</button>
             <div style="display:flex;gap:6px">
-              <button class="sw-btn play" id="btn-lsc-save">💾 SAVE CARD SLOT ${lsActiveCardIdx + 1}</button>
+              <button class="sw-btn play" id="btn-lsc-save">SAVE CARD SLOT ${lsActiveCardIdx + 1}</button>
               <button class="micro-btn swooz-rec-btn" id="btn-lsc-arm">SAVE &amp; ACTIVATE BUILD</button>
             </div>
           </div>
@@ -4193,7 +4212,7 @@
             </button>
             <button class="sw-btn play" data-sw-play="${s.id}" data-sw-script="${escAttr(s.effective_line || s.script)}" title="Audition through 90s V10 FX">▶ V10 TEST</button>
             <label class="sw-btn" title="Upload .wav / .m4a / .mp3 from iPhone or PC">
-              📁 FILE
+              LOAD WAV
               <input type="file" accept="audio/*" data-sw-file="${s.id}" style="display:none" />
             </label>
             ${s.recorded ? `<button class="sw-btn del" data-sw-del="${s.id}" title="Clear recorded WAV clip">✕</button>` : ""}
@@ -4622,7 +4641,7 @@
       try {
         await navigator.clipboard.writeText(txt);
         btn.textContent = "✓ COPIED!";
-        setTimeout(() => { btn.textContent = "📋 COPY LINK"; }, 1400);
+        setTimeout(() => { btn.textContent = "COPY URL"; }, 1400);
       } catch (_) {}
     });
     document.getElementById("btn-preview-crew")?.addEventListener("click", () => {

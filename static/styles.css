@@ -4098,3 +4098,138 @@ body[data-obs="1"] .obs-stream-hud {
   opacity: 1;
   color: #ffffff;
 }
+
+/* =========================================================================
+   7) DEDICATED OBS SHOWCASE SPLIT-PANELS (`?obs_panel=right` & `?obs_panel=bottom`)
+      Used by the SWOOZ PitWall OBS Showcase Scene Collection to frame 16:9 Gameplay
+      alongside 100% of live 50Hz PitWall mechanics at 1920x1080!
+   ========================================================================= */
+body[data-obs-panel="right"],
+body[data-obs-panel="bottom"] {
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+  background: #090b10 !important;
+}
+body[data-obs-panel="right"] .side-rail,
+body[data-obs-panel="bottom"] .side-rail,
+body[data-obs-panel="right"] .mobile-slab-dock,
+body[data-obs-panel="bottom"] .mobile-slab-dock {
+  display: none !important;
+}
+body[data-obs-panel="right"] .pitwall-shell,
+body[data-obs-panel="bottom"] .pitwall-shell {
+  height: 100vh !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 4px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+}
+
+/* RIGHT PANEL (642x1048): Shift-Lights + Ribbon + Map/3D-Radar + Stint + Spy/Cards + Switches */
+body[data-obs-panel="right"] .top-controls,
+body[data-obs-panel="right"] .session-ribbon .rib-group.right,
+body[data-obs-panel="right"] .tower-panel,
+body[data-obs-panel="right"] .center-mid-split,
+body[data-obs-panel="right"] .trace-panel,
+body[data-obs-panel="right"] .radio-panel {
+  display: none !important;
+}
+body[data-obs-panel="right"] .topbar {
+  display: grid !important;
+  grid-template-columns: auto 1fr !important;
+  gap: 6px !important;
+}
+body[data-obs-panel="right"] .brand-meta,
+body[data-obs-panel="right"] .sl-label {
+  display: none !important;
+}
+body[data-obs-panel="right"] #tab-live.active {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+body[data-obs-panel="right"] #tab-live .pitwall-grid {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  overflow: hidden !important;
+}
+body[data-obs-panel="right"] .fold-left-pane,
+body[data-obs-panel="right"] .center-stack,
+body[data-obs-panel="right"] .right-stack {
+  display: contents !important;
+}
+body[data-obs-panel="right"] .map-panel {
+  order: 1;
+  flex: 1 1 190px !important;
+  min-height: 180px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+body[data-obs-panel="right"] .map-stage {
+  flex: 1 1 0 !important;
+  height: auto !important;
+  min-height: 145px !important;
+}
+body[data-obs-panel="right"] .stint-panel { order: 2; flex-shrink: 0 !important; }
+body[data-obs-panel="right"] .comparator-panel { order: 3; flex-shrink: 0 !important; }
+body[data-obs-panel="right"] .switches-panel { order: 4; flex-shrink: 0 !important; }
+
+/* BOTTOM PANEL (1232x343): 4-Wheel Thermals + 50Hz Oscilloscope + Voice Bar & Pit-Radio */
+body[data-obs-panel="bottom"] .topbar,
+body[data-obs-panel="bottom"] .session-ribbon,
+body[data-obs-panel="bottom"] .tower-panel,
+body[data-obs-panel="bottom"] .map-panel,
+body[data-obs-panel="bottom"] .reticle-panel,
+body[data-obs-panel="bottom"] .stint-panel,
+body[data-obs-panel="bottom"] .comparator-panel,
+body[data-obs-panel="bottom"] .switches-panel {
+  display: none !important;
+}
+body[data-obs-panel="bottom"] #tab-live.active {
+  flex: 1 1 0 !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+}
+body[data-obs-panel="bottom"] #tab-live .pitwall-grid {
+  flex: 1 1 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-columns: 310px minmax(0, 1.18fr) minmax(0, 1.12fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  gap: 7px !important;
+  align-items: stretch !important;
+}
+body[data-obs-panel="bottom"] .fold-left-pane,
+body[data-obs-panel="bottom"] .center-stack,
+body[data-obs-panel="bottom"] .center-mid-split,
+body[data-obs-panel="bottom"] .right-stack {
+  display: contents !important;
+}
+body[data-obs-panel="bottom"] .thermal-panel,
+body[data-obs-panel="bottom"] .trace-panel,
+body[data-obs-panel="bottom"] .radio-panel {
+  height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+body[data-obs-panel="bottom"] .osc-layout {
+  flex: 1 1 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+body[data-obs-panel="bottom"] .radio-feed {
+  flex: 1 1 0 !important;
+  max-height: none !important;
+  min-height: 0 !important;
+}

@@ -45,12 +45,12 @@
         <span class="mh-call" id="mh-call">NOMINAL</span>
       </div>
       <div class="mh-actions">
-        <button class="mh-btn gold" id="mh-btn-push" title="Fire Active Push Mode [F5 / Mouse 5]">⚡ PUSH: SUPER COMMS</button>
+        <button class="mh-btn gold" id="mh-btn-push" title="Fire Active Push Mode [F5 / Mouse 5]">▸ PUSH: SUPER COMMS</button>
         <button class="mh-btn" id="mh-btn-box" title="Toggle Box This Lap [F6 / Mouse 4]">BOX [F6]</button>
         <button class="mh-btn" id="mh-btn-autocard" title="Toggle Auto Card Strategist [F7]">AUTO CARD</button>
         <button class="mh-btn" id="mh-btn-autotire" title="Toggle Auto Tire Compound [Num 5]">AUTO TIRE</button>
         <button class="mh-btn" id="mh-btn-pitguard" title="Toggle Pit Cliff Guard [Num 6]">PIT GUARD</button>
-        <button class="mh-btn" id="mh-btn-mic" title="Hands-Free Voice Mic [V]">🎙 MIC OFF</button>
+        <button class="mh-btn" id="mh-btn-mic" title="Hands-Free Voice Mic [V]">MIC OFF [V]</button>
         <button class="mh-btn expand" id="btn-exit-mini-hud" title="Restore Full 3-Column SWOOZ PitWall [Num 9]">FULL WALL ⤢</button>
       </div>
     </div>
@@ -104,7 +104,7 @@
           <button class="tab-btn" data-tab="hardware">.0001 MATRIX</button>
           <button class="tab-btn" data-tab="stints">STINTS &amp; LOGS</button>
           <button class="tab-btn" data-tab="debrief">DEBRIEF</button>
-          <button class="tab-btn" data-tab="league">🏆 OPEN GP</button>
+          <button class="tab-btn" data-tab="league">OPEN GP</button>
         </nav>
         <div class="hdr-btns">
           <button class="tact-pill active" id="btn-sim-toggle" title="Toggle 50Hz Demo Simulator">SIM ON</button>
@@ -377,7 +377,7 @@
                 <button class="deck-tab active" data-deck="delta">HARDWARE DELTA</button>
                 <button class="deck-tab" data-deck="cards">UPGRADES <span id="card-pts-badge" class="pts-pill">0</span></button>
                 <button class="deck-tab" data-deck="tires">COMPOUNDS</button>
-                <button class="deck-tab" data-deck="spy">🕵️ SPY &amp; CAM</button>
+                <button class="deck-tab" data-deck="spy">SPY // CAM</button>
               </div>
               <span class="mono muted" id="diff-vs-label">VS P2</span>
             </div>
@@ -390,7 +390,7 @@
             <!-- Sub-deck B: EV Upgrade Cards + P1 Podium Blueprint Engine -->
             <div class="deck-pane" id="deck-cards">
               <div class="p1-blueprint-box mono" id="p1-blueprint-box">
-                <div class="p1b-top" id="p1b-top">🏆 P1 BLUEPRINT: LOADING ARCHIVE…</div>
+                <div class="p1b-top" id="p1b-top">P1 BLUEPRINT // LOADING ARCHIVE…</div>
                 <div class="p1b-sub" id="p1b-sub">SPD 0/6 · CRN 0/6 · PRF 0/6 · BST 0/6</div>
               </div>
               <div class="cards-list" id="cards-container"></div>
@@ -416,7 +416,7 @@
                 <div class="spy-row">Waiting for 50Hz rival telemetry…</div>
               </div>
               <div class="cam-director-bar">
-                <button class="cam-btn tv-dir-btn" id="btn-tv-director" title="AI TV Broadcast Camera Director — Auto-cuts between Helicopter Start, BattleCam Overtakes, T-Cam DRS &amp; TrackSide Pits (100% Allowed in Public Lobbies!)">🎬 AI TV DIRECTOR: OFF</button>
+                <button class="cam-btn tv-dir-btn" id="btn-tv-director" title="AI TV Broadcast Camera Director — Auto-cuts between Helicopter Start, BattleCam Overtakes, T-Cam DRS &amp; TrackSide Pits (100% Allowed in Public Lobbies!)">TV DIR // OFF</button>
                 <button class="cam-btn" data-cam="Onboard_BattleCam" title="Wheel-to-wheel Battle Camera (Allowed in Public Lobbies!)">BATTLE CAM</button>
                 <button class="cam-btn" data-cam="Onboard_Rear" title="Instant Rear-View Check (Allowed in Public Lobbies!)">REAR VIEW</button>
                 <button class="cam-btn" data-cam="Onboard_TCam">T-CAM</button>
@@ -534,7 +534,7 @@
               <h2>PIT-RADIO &amp; VOICE COMMS</h2>
               <div class="hdr-meta">
                 <button class="micro-btn" id="btn-loadout-studio" title="Customize 5 Push Modes &amp; 5 Card Build Strategies">5-SLOT LAB ⚙</button>
-                <button class="micro-btn swooz-rec-btn" id="btn-swooz-studio" title="Create, Record, or Import Your Own Custom Crew Voice Personas">CREW STUDIO 🎙️</button>
+                <button class="micro-btn swooz-rec-btn" id="btn-swooz-studio" title="Create, Record, or Import Your Own Custom Crew Voice Personas">CREW STUDIO</button>
                 <button class="micro-btn" id="btn-voice-help" title="Show Voice Commands &amp; Hotkeys Cheat-Sheet">CMDS ?</button>
                 <button class="micro-btn" id="btn-voice-sample" title="Audition Selected Engineer">TEST VOICE</button>
               </div>
@@ -586,9 +586,9 @@
 
       <!-- SLAB PHONE THUMB-REACH BOTTOM SUB-DECK BAR (ZERO PAGE-SCROLL FIGHTING!) -->
       <nav class="mobile-slab-dock" id="mobile-slab-dock" aria-label="Slab Phone Cockpit Views">
-        <button type="button" class="slab-dock-btn active" data-slab-target="engineer">⚡ ENGINEER &amp; RADIO</button>
-        <button type="button" class="slab-dock-btn" data-slab-target="track">🏁 TOWER &amp; MAP</button>
-        <button type="button" class="slab-dock-btn" data-slab-target="telemetry">📊 TELEMETRY</button>
+        <button type="button" class="slab-dock-btn active" data-slab-target="engineer">ENGINEER // RADIO</button>
+        <button type="button" class="slab-dock-btn" data-slab-target="track">TOWER // MAP</button>
+        <button type="button" class="slab-dock-btn" data-slab-target="telemetry">TELEMETRY // OSC</button>
       </nav>
     </main>
 
@@ -709,7 +709,7 @@
       <div class="league-grid">
         <section class="fia-panel league-main-panel">
           <div class="panel-hdr">
-            <h2 id="league-title-hdr">🏆 SWOOZ OPEN GP CHAMPIONSHIP — PUBLIC &amp; HOSTED ELO STANDINGS</h2>
+            <h2 id="league-title-hdr">SWOOZ OPEN GP // CHAMPIONSHIP — PUBLIC &amp; HOSTED ELO STANDINGS</h2>
             <div class="hdr-meta">
               <button class="micro-btn" id="btn-league-humans" title="Filter standings to Human Players Only vs Full Grid">FILTER: ALL DRIVERS</button>
               <button class="micro-btn" id="btn-refresh-league">REFRESH STANDINGS</button>
@@ -743,7 +743,7 @@
         <div class="league-side-stack">
           <section class="fia-panel">
             <div class="panel-hdr">
-              <h2>📡 DISCORD PODIUM WEBHOOK</h2>
+              <h2>DISCORD // PODIUM WEBHOOK</h2>
               <span class="mono muted" id="league-discord-status">READY</span>
             </div>
             <div class="league-discord-box">
@@ -752,15 +752,15 @@
               <label class="mono muted">DISCORD CHANNEL WEBHOOK URL (AUTO-POSTS PODIUM &amp; TOP 5 ELO AFTER EVERY HOSTED RACE)</label>
               <input type="password" id="inp-discord-webhook" class="ls-input mono" placeholder="https://discord.com/api/webhooks/..." />
               <div class="league-btn-row">
-                <button class="sw-btn play" id="btn-save-league-cfg">💾 SAVE WEBHOOK</button>
-                <button class="sw-btn" id="btn-test-discord">🚀 POST STANDINGS TO DISCORD NOW</button>
+                <button class="sw-btn play" id="btn-save-league-cfg">SAVE WEBHOOK</button>
+                <button class="sw-btn" id="btn-test-discord">POST TO DISCORD NOW</button>
               </div>
             </div>
           </section>
 
           <section class="fia-panel">
             <div class="panel-hdr">
-              <h2>⏱️ CIRCUIT × CLASS LAP RECORDS</h2>
+              <h2>CIRCUIT × CLASS LAP RECORDS</h2>
             </div>
             <div class="league-records-list mono" id="league-records-list"></div>
           </section>
@@ -771,20 +771,20 @@
     <!-- 2-PLAYER CO-OP RACE ENGINEER LIVE CALLOUT DOCK (ACTIVE WHEN OPENED WITH ?role=crew) -->
     <div class="crew-chief-dock" id="crew-chief-dock" style="display:none">
       <div class="ccd-hdr mono">
-        <strong>👥 LIVE CO-OP RACE ENGINEER LINK</strong>
+        <strong>CO-OP // LIVE RACE ENGINEER LINK</strong>
         <span class="muted">Tap any callout below to speak directly into the Driver's F1 Radio!</span>
       </div>
       <div class="ccd-btns">
-        <button type="button" class="ccd-btn crit" data-crew-call="Box this lap, box box! Clean window open!">🛞 BOX THIS LAP!</button>
-        <button type="button" class="ccd-btn strat" data-crew-call="Rival pitting — push now for the undercut!">⚡ UNDERCUT PUSH!</button>
-        <button type="button" class="ccd-btn crit" data-crew-call="Defend the inside line! Rival has Super Boost behind!">🛡️ DEFEND INSIDE!</button>
-        <button type="button" class="ccd-btn strat" data-crew-call="Rain incoming on radar — prepare Wet compound!">🌧️ RAIN — WETS!</button>
-        <button type="button" class="ccd-btn" data-crew-call="Lift and coast — save tires for the final stint!">🔋 SAVE TIRES!</button>
-        <button type="button" class="ccd-btn" data-crew-call="Clear air ahead, hammer down!">🔥 HAMMER DOWN!</button>
+        <button type="button" class="ccd-btn crit" data-crew-call="Box this lap, box box! Clean window open!">BOX THIS LAP</button>
+        <button type="button" class="ccd-btn strat" data-crew-call="Rival pitting — push now for the undercut!">UNDERCUT PUSH</button>
+        <button type="button" class="ccd-btn crit" data-crew-call="Defend the inside line! Rival has Super Boost behind!">DEFEND INSIDE</button>
+        <button type="button" class="ccd-btn strat" data-crew-call="Rain incoming on radar — prepare Wet compound!">RAIN // WETS</button>
+        <button type="button" class="ccd-btn" data-crew-call="Lift and coast — save tires for the final stint!">SAVE TIRES</button>
+        <button type="button" class="ccd-btn" data-crew-call="Clear air ahead, hammer down!">HAMMER DOWN</button>
       </div>
       <div class="ccd-custom-row">
         <input type="text" id="inp-crew-custom" class="ls-input" placeholder="Type custom radio message to speak in Driver's headset..." maxlength="140" />
-        <button type="button" class="sw-btn play" id="btn-send-crew-custom">📻 TRANSMIT</button>
+        <button type="button" class="sw-btn play" id="btn-send-crew-custom">TRANSMIT</button>
       </div>
     </div>
 
@@ -811,7 +811,7 @@
           <span id="obs-radar-lbl">CLEAR</span>
         </div>
       </div>
-      <div class="obs-radio-toast mono" id="obs-radio-toast">📻 ENG // TELEMETRY SYNCHRONIZED</div>
+      <div class="obs-radio-toast mono" id="obs-radio-toast">ENG // TELEMETRY SYNCHRONIZED</div>
       <button type="button" class="obs-exit-btn mono" id="btn-exit-obs" title="Exit OBS Preview back to Full PitWall">EXIT OBS PREVIEW</button>
     </div>
 
@@ -819,21 +819,21 @@
     <div class="qr-modal-backdrop" id="qr-modal" style="display:none">
       <div class="fia-panel qr-modal-card" style="width:min(540px,95vw)">
         <div class="panel-hdr">
-          <h2>📱 MOBILE · 👥 2P CO-OP CREW · 🎥 OBS STREAM HUB</h2>
+          <h2>SECOND SCREEN // 2P CO-OP // OBS STREAM HUB</h2>
           <button class="micro-btn" id="btn-close-qr">CLOSE</button>
         </div>
         <div class="qr-modal-body">
           <div class="hub-mode-pills">
-            <button type="button" class="sw-btn play active" data-hub-mode="mobile">📱 PHONE / FOLD</button>
-            <button type="button" class="sw-btn" data-hub-mode="crew">👥 2P CO-OP ENGINEER</button>
-            <button type="button" class="sw-btn" data-hub-mode="obs">🎥 OBS STREAM HUD</button>
+            <button type="button" class="sw-btn play active" data-hub-mode="mobile">PHONE // FOLD</button>
+            <button type="button" class="sw-btn" data-hub-mode="crew">2P CO-OP CREW</button>
+            <button type="button" class="sw-btn" data-hub-mode="obs">OBS STREAM HUD</button>
           </div>
           <img id="qr-img" alt="Scan QR Code" width="176" height="176" />
           <div class="qr-url mono" id="qr-url-lbl">http://127.0.0.1:8765</div>
           <div class="league-btn-row" style="justify-content:center">
-            <button type="button" class="sw-btn play" id="btn-copy-hub-url">📋 COPY LINK</button>
-            <button type="button" class="sw-btn" id="btn-preview-crew">👥 TEST CO-OP DOCK</button>
-            <button type="button" class="sw-btn" id="btn-preview-obs">🎥 PREVIEW OBS HUD</button>
+            <button type="button" class="sw-btn play" id="btn-copy-hub-url">COPY URL</button>
+            <button type="button" class="sw-btn" id="btn-preview-crew">TOGGLE CO-OP DOCK</button>
+            <button type="button" class="sw-btn" id="btn-preview-obs">PREVIEW OBS HUD</button>
           </div>
           <p class="muted" id="qr-hub-desc" style="text-align:center;max-width:440px">
             <strong>Public-Lobby Ready:</strong> Scan on a Slab or Foldable phone for a 50Hz second screen, share the <b>2P Co-Op Engineer</b> link so a friend can call strategy into your headset, or paste the <b>OBS URL</b> as a <code>1920×1080</code> Browser Source!
@@ -850,7 +850,7 @@
         </div>
         <div class="voice-help-body">
           <div class="vh-section">
-            <div class="vh-title">🎙️ READ-WHAT-YOU-SEE VOICE ENGINE (<code>[V]</code> — SAY ANY BUTTON LABEL ALOUD)</div>
+            <div class="vh-title">VOICE ENGINE // SPEAK ANY LABEL (<code>[V]</code> — SAY ANY BUTTON LABEL ALOUD)</div>
             <div class="vh-grid mono">
               <span>"Start Race" · "Lights out" · "Ready up"</span><strong>→ Auto-holds [SPACE] in-game to start race</strong>
               <span>"L'Endurance" · "Le Mans" · "Endurance"</span><strong>→ Dials in Dom's L'Endurance P1 package</strong>
@@ -867,7 +867,7 @@
             </div>
           </div>
           <div class="vh-section">
-            <div class="vh-title">🎮 ZERO-ALT-TAB IN-GAME HOTKEYS (WORKS WHILE DRIVING — NEVER OVERRIDES GAME KEYS)</div>
+            <div class="vh-title">IN-GAME HOTKEYS // ZERO ALT-TAB (WORKS WHILE DRIVING — NEVER OVERRIDES GAME KEYS)</div>
             <div class="vh-keys mono">
               <span><b>[F5] / [MOUSE 5] / [NUM 0]</b> Fire Active Push Mode</span>
               <span><b>[F6] / [MOUSE 4] / [NUM .]</b> Toggle Box This Lap</span>
@@ -903,8 +903,8 @@
           </div>
         </div>
         <div class="loadout-studio-tabs">
-          <button class="ls-tab active" data-lstab="push">⚡ 5 PUSH MODE SLOTS (50HZ BOOST)</button>
-          <button class="ls-tab" data-lstab="card">🃏 5 CARD BUILD SLOTS (EV STRATEGIST)</button>
+          <button class="ls-tab active" data-lstab="push">5 PUSH MODE SLOTS // 50HZ BOOST</button>
+          <button class="ls-tab" data-lstab="card">5 CARD BUILD SLOTS // EV STRATEGIST</button>
         </div>
         <div class="swooz-studio-tip mono" id="loadout-studio-tip">
           <strong>INSTANT VOICE SYNC:</strong> Rename any of the <b>5 slots</b> below and its new button name immediately works hands-free on Pit Radio! Both bars are strictly capped at <b>5 tactical slots</b> so your cockpit stays clean under race pressure.
@@ -928,7 +928,7 @@
     <div class="qr-modal-backdrop" id="swooz-studio-modal" style="display:none">
       <div class="fia-panel qr-modal-card swooz-studio-card">
         <div class="panel-hdr">
-          <h2>🎙️ CUSTOM CREW VOICE STUDIO — CREATE, RECORD &amp; SHARE .ZIP PACKS</h2>
+          <h2>CUSTOM CREW VOICE STUDIO // RECORD &amp; SHARE .ZIP PACKS</h2>
           <div class="hdr-meta">
             <span class="mono muted" id="swooz-studio-prog">0 / 29 RECORDED</span>
             <button class="micro-btn swooz-rec-btn" id="btn-use-swooz-voice">ACTIVATE PERSONA</button>
@@ -945,7 +945,7 @@
             ⬆ IMPORT .ZIP
             <input type="file" id="inp-import-persona-zip" accept=".zip,application/zip" style="display:none" />
           </label>
-          <button class="sw-btn" id="btn-delete-persona" title="Delete selected custom persona">🗑 DELETE</button>
+          <button class="sw-btn" id="btn-delete-persona" title="Delete selected custom persona">DELETE</button>
         </div>
 
         <!-- PERSONA VOICE TIMBRE & ACOUSTIC TRIM -->
