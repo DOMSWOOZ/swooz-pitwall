@@ -1,6 +1,9 @@
 ========================================================================
   SWOOZ PITWALL — LIVE RACE ENGINEER & TEAM COMMS (Community Edition)
   Created by Dom_Swooz for Backseat Champions (v0.88.2+ Telemetry API)
+  Backseat Champions on Steam: https://store.steampowered.com/app/2174510/Backseat_Champions/
+  Itch.io Page & Live Demo:    https://dom-swooz.itch.io/swooz-pitwall
+  GitHub Source & Full Docs:   https://github.com/DOMSWOOZ/swooz-pitwall
 ========================================================================
 
 QUICK START (ZERO SETUP):
