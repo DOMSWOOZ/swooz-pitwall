@@ -1,155 +1,70 @@
-# 🏎️ SWOOZ PitWall — Live 50Hz Race Engineer & Voice Comms for *Backseat Champions*
+# SWOOZ PitWall — Live 50Hz Race Engineer & Telemetry Client for *Backseat Champions*
 
-> **Zero-lag local Pit-Radio Engineer, 50Hz F1-style Telemetry Cockpit, Hands-Free Voice Commands, Zero-`Alt+Tab` In-Game Hotkeys, and `80.7K`-Synced Extreme AI Strategy Co-Pilot.**
->
-> 🎮 **Built for [*Backseat Champions* on Steam](https://store.steampowered.com/app/2174510/Backseat_Champions/)** · 🕹️ **[Download & Try Live Web Demo on Itch.io](https://dom-swooz.itch.io/swooz-pitwall)**
+Open-source companion app built on top of [*Backseat Champions*' official 50Hz UDP Game API](https://store.steampowered.com/app/2174510/Backseat_Champions/) (`ports 29770 / 29771` + `/race-results` webhook). Runs locally on Windows using the Python standard library (`0` third-party `pip` packages required) and renders in a zero-scroll cockpit for PC monitors, slab phones, and foldable displays.
 
-<p align="center">
-  <img src="docs/cover.gif" alt="SWOOZ PitWall Official Key Art" width="630" />
-</p>
+- **Try Live in Browser / Download on Itch.io:** [dom-swooz.itch.io/swooz-pitwall](https://dom-swooz.itch.io/swooz-pitwall)
+- **Get *Backseat Champions* on Steam:** [store.steampowered.com/app/2174510/Backseat_Champions](https://store.steampowered.com/app/2174510/Backseat_Champions/)
 
-### 🖥️ Live Zero-Scroll 50Hz Telemetry Cockpit
-
-![SWOOZ PitWall Live 50Hz Cockpit](docs/cockpit.jpg)
+![SWOOZ PitWall Real UI Overview](docs/cover_real_ui.jpg)
 
 ---
 
-## 🌐 NEW in v2.4: Public Lobby Racing, Broadcast & Open GP Suite
+## What's New in v2.4 — Public Lobby & Mobile Update
 
-Built 100% within *Backseat Champions*' official Fair-Play Public Lobby API rules (zero blocked input injection — pure 50Hz read-only telemetry, sanctioned `set_camera` views, and host `POST /race-results` webhooks):
+In *Backseat Champions*, public lobbies lock external car and menu commands (`pick_card`, `set_pit`, `pick_tire`, `boost`, `drive`) for fair play, while keeping the full 16-car 50Hz telemetry stream, `set_camera`, and host `/race-results` uploads active. **v2.4** adds a dedicated suite built specifically around what works legally in public multiplayer races:
 
-- **🛡️ Automatic Public-Lobby Fair-Play Shield & `< 2 ms` Spotter Callouts** — Automatically detects `public_lobby = true`, shields blocked car/menu commands, and converts your AI Race Engineer into a zero-delay human spotter (**`"Pick 2 — Pit Speed!"`** + neon HUD banner so you tap `[1]`/`[2]`/`[3]` yourself instantly).
-- **📡 50Hz 3D Helicopter Blind-Spot Radar & Spatial Ear Spotter** — Tracks nearby cars in real-time meters (`CAR LEFT`, `CAR RIGHT`, `3-WIDE!`, `DIVEBOMB`) with directional left/right stereo ear tones (`StereoPannerNode`) to survive Turn 1 public-lobby chaos.
-- **🕵️ Live Rival Build Spy (`SPY & CAM` Deck)** — Decodes all 16 cars' live `.0001` performance ratios and ability unlocks (`SUPER BOOST`, `DRS`, `PARTY MODE`) so your engineer warns you when P2 behind unlocks Super Boost or holds a straight-line torque edge.
-- **🎬 Voice Camera Switcher & AI TV Broadcast Director (`set_camera`)** — Switch views hands-free in public lobbies (`"Battle Cam"`, `"Rear View"`, `"T-Cam"`, `"Helicopter"`) or arm **AI TV Director** for automatic broadcast camera cuts.
-- **🎥 Transparent `1920×1080` OBS Stream Overlay (`?obs=1`) & 👥 2-Player Co-Op Crew Link (`?role=crew`)** — Drop `http://127.0.0.1:8765/?obs=1` into OBS Studio for an instant transparent F1 stream HUD, or send the `?role=crew` LAN/Web link to a friend so they can transmit live Pit-Radio strategy calls directly into your headset!
-- **🏆 `SWOOZ Open GP` Elo Leaderboard, Lap Records & Discord Podium Bot** — Host any Public or Open Lobby with `http://127.0.0.1:8765/race-results` to automatically rank every driver by **Multiplayer Elo + FIA Points**, track **Circuit × Car-Class Lap Records**, and auto-post Podium embeds to Discord!
-- **📱 Dedicated Slab Smartphone & Unfolded Foldable Split-Screen Modes** — Sticky bottom Thumb Dock on narrow phones (`AUTO · SLAB`) and a 50/50 Dual-Pane Hinge Cockpit on unfolded foldables (`AUTO · FOLD`).
+- **Public-Lobby Fair-Play Shield & Instant Card Spotter:** Automatically detects `public_lobby = true`, disables blocked UDP commands so the game never throws `public_lobby` errors, and switches to instant audio + HUD callouts (`"Pick 2 — Pit Speed!"`) the moment an upgrade hand appears so you can press `1`–`3` yourself without looking away from the track.
+- **50Hz 3D Blind-Spot Radar & Spatial Audio:** Projects nearby cars from `Motion` world coordinates into local meter offsets (`CAR LEFT`, `CAR RIGHT`, `3-WIDE`, `DIVEBOMB`) with left/right stereo ear tones via Web Audio `StereoPannerNode`.
+- **Live Rival Build Spy (`SPY & CAM` Deck):** Reads live `Car Status` `.0001` performance ratios and `Car Abilities` flags across all 16 cars, alerting you over radio when the car ahead or behind unlocks **Super Boost**, **DRS**, or **Party Mode**, or holds a straight-line vs. cornering advantage.
+- **Voice Camera Control & AI TV Director (`set_camera`):** Since `set_camera` remains unlocked in public lobbies, you can call `"Battle Cam"`, `"Rear View"`, `"T-Cam"`, `"Chase"`, or `"Helicopter"` hands-free, or turn on **AI TV Director** for automatic camera cuts while spectating or hosting.
+- **Transparent `1920x1080` OBS Stream Overlay (`?obs=1`):** Add `http://127.0.0.1:8765/?obs=1` as an OBS Browser Source for a clean transparent timing tower, pedal/speed halo, proximity radar, and live radio subtitle strip.
+- **2-Player Co-Op Engineer Link (`?role=crew`):** Open `http://<LAN-IP>:8765/?role=crew` on a second device so a friend can watch your tire cliffs, weather slope, and rival gaps and send 1-tap or custom radio callouts straight into your headset.
+- **Open GP Elo & Points Leaderboard (`OPEN GP` Tab):** Point *Backseat Champions*' **Race Results** URL at `http://127.0.0.1:8765/race-results` when hosting lobbies to track FIA points, pairwise multiplayer Elo ratings, circuit/class lap records, and optional Discord webhook podium posts.
+- **Slab & Foldable Mobile Modes:** Dedicated `AUTO · SLAB` bottom thumb-dock layout for narrow phones (`< 600px`) and `AUTO · FOLD` 50/50 split-screen layout for unfolded foldables in portrait/square orientation.
 
----
-
-## ✨ Core Highlights
-
-- **⚡ Zero-Scroll 50Hz Telemetry Cockpit** — Live 16-car Timing Tower with sector deltas & compound badges, interactive Track Corridor map, 4-wheel Tire Thermal & Wear rings, G-Force meter, live Driver vs. Rival/Extreme-AI Multi-Oscilloscope (`Pedal` + `Steer`), and real-time Undercut / Pit-Rejoin Window predictor.
-- **📻 Zero-Lag Local Pit-Radio Engineer** — Powered by an offline WinRT speech daemon with pre-warmed memory cache and 90s V10 F1 radio band-pass processing (`0 ms` cloud latency, zero API keys required). Choose from multiple Race Engineer personas (**UK · Hannah**, **IE · Connor**, **US · Crew Chief**, **US · Atlas AI**).
-- **🎙️ "Speak What You See" Hands-Free Voice Control** — Every strategy button, pace mode, pit call, and upgrade card on the PitWall can be triggered by voice while driving full-screen — including fuzzy headset homophone matching (`"Super Comms"`, `"Auto Card"`, `"Extreme AI"`, `"Box Box"`, `"Pick One"`).
-- **🎮 Zero-`Alt+Tab` Single-Monitor Suite** —
-  - **Passive In-Game Hotkeys (`F5`–`F8`, Mouse `MB4`/`MB5`, `Numpad 0–9`)** fire PitWall commands *only* while `BackseatChampions.exe` is in the foreground — never hijacking keys when typing elsewhere.
-  - **`NO-ALT-TAB: ON`** automatically snaps focus back to the game ~`35 ms` after clicking any PitWall switch on a second monitor.
-  - **`MINI HUD` + `PIN TOP`** collapses PitWall into a sleek `1280×136` always-on-top telemetry & radio strip for single-monitor setups.
-- **🧠 `EXTREME AI` 80.7K Strategy Sync** — Calibrated against *Backseat Champions*' `80,721` Extreme AI race trees (`Quad 6/6 Facility Rush`: **Speed + Boost + Performance + Cornering** → Augment/Timed closer) with live `50 Hz` AI ghost input overlays.
-- **🛠️ Custom Crew Studio (`.zip` Voice Packs)** — Record or import your own `.wav`/`.mp3`/`.ogg` radio callouts right inside the browser UI (`CREW STUDIO 🎙️`) and export/import shareable `.zip` Crew Packs with friends and leagues.
-- **🎨 Bonus 9-Car Livery Builders Included** — Includes procedural 2× supersampled livery generators for **SWOOZ Works (`#1`)** and **SWOOZ Heritage `'91` (`#91`)** across all 9 *Backseat Champions* car classes.
+![Slab Smartphone vs Unfolded Foldable Split-Screen](docs/mobile_slab_fold.jpg)
 
 ---
 
-## 📸 Cockpit & Livery Gallery
+## Core Features (Single-Player & Custom API Lobbies)
 
-| Strategy Switches, Golden `SUPER COMMS` & Voice Radio | 16-Car Timing Tower, Circuit Map & 4-Wheel Thermals |
-| :---: | :---: |
-| ![Strategy Switches and Voice Comms](docs/strategy_voice.jpg) | ![Timing Tower and Thermals](docs/telemetry.jpg) |
-
-| Bonus Livery Suite: **SWOOZ Works (`#1`)** | Bonus Livery Suite: **SWOOZ `'91` Heritage (`#91`)** |
-| :---: | :---: |
-| ![SWOOZ Works Livery](docs/livery_works.jpg) | ![SWOOZ 91 Livery](docs/livery_91.jpg) |
+- **50Hz Telemetry Cockpit:** 16-car timing tower, self-mapping 2D track corridor, 4-wheel slip/thermal blocks, G-G friction circle, 4-lane oscilloscope (`Speed`, `Throttle`, `Brake`, `Steering`), and pit-rejoin traffic calculator.
+- **Local WinRT Pit-Radio Voice:** Offline Windows speech synthesis piped through a 90s V10 F1 radio bandpass/squelch chain (`0 ms` cloud wait, no API keys). Includes **Crew Studio** for recording or sharing custom `.zip` voice packs.
+- **Hands-Free Voice Commands (`[V]`):** Trigger pit calls, tire compounds, pace modes, camera angles, or card picks by reading button labels aloud.
+- **Single-Monitor & Zero-`Alt+Tab` Tools:** Optional foreground-gated hotkeys (`F5`–`F8`, `Mouse 4/5`, `Numpad 0–9`) active only while `BackseatChampions.exe` is focused, plus a compact `1280x136` always-on-top `MINI HUD`.
+- **Optional Co-Pilot Assists (Custom/Private Lobbies Only):** `Auto Card` (calibrated against archived race logs and 5 customizable build slots), `Auto Tire`, `Pit Cliff Guard`, and 5 customizable `Push` boost macros.
 
 ---
 
-## 🚀 Quick Start (Windows)
+## Quick Start (Windows)
 
-### 1. Prerequisites
-- **Windows 10 / 11** (uses built-in Microsoft Edge / Chrome app-window mode + native WinRT Speech Synthesis)
-- **Python 3.10+** ([python.org](https://www.python.org/downloads/)) — standard library only for the live PitWall server (`0` third-party pip packages required to run!)
-- **Backseat Champions** on Steam → [store.steampowered.com/app/2174510/Backseat_Champions](https://store.steampowered.com/app/2174510/Backseat_Champions/)
-
-### 2. Enable UDP Telemetry in *Backseat Champions*
-In *Backseat Champions*, open **Settings → Telemetry / API** and verify:
-- **UDP Telemetry Output:** `Enabled` → `127.0.0.1` port **`29770`**
-- **UDP Command Input (External Assist):** `Enabled` → `127.0.0.1` port **`29771`**
-
-*(Note: Auto-Card, Auto-Boost, and Auto-Pit commands require **External / AI Assist** to be permitted in lobby rules; PitWall will warn you over Pit Radio if a lobby blocks external commands.)*
-
-### 3. Launch SWOOZ PitWall
-- **Manual Launch:** Double-click **`start_pitwall.bat`** — opens the dedicated frameless PitWall cockpit at `http://127.0.0.1:8765`.
-- **Hands-Free Steam Auto-Launch (Optional):** Double-click **`enable_autolaunch.bat`** once. A silent background watcher (`0%` CPU) will automatically open SWOOZ PitWall whenever `BackseatChampions.exe` launches and close it cleanly after you exit the game. Run **`disable_autolaunch.bat`** anytime to turn this off.
-- **No Game Running? Try `DEMO SIM`:** Click **`DEMO SIM`** in the top bar anytime to stream a full 16-car Grand Prix simulation with live overtakes, tire wear, rain transitions, upgrade cards, and Pit-Radio callouts!
+1. Install **Python 3.10+** ([python.org](https://www.python.org/downloads/)). No `pip install` step is needed.
+2. In *Backseat Champions* → **Settings → Telemetry**:
+   - **Telemetry Out:** `127.0.0.1`, port `29770` (enable Driver Data, Player Data, and Decision Events).
+   - **Commands In:** `127.0.0.1`, port `29771` (used for `set_camera` in public lobbies, and optional co-pilot inputs in private/offline sessions).
+   - **Race Results (Optional):** `http://127.0.0.1:8765/race-results` (archives post-race results and updates the Open GP leaderboard when you host).
+3. Double-click **`start_pitwall.bat`** to open the cockpit at `http://127.0.0.1:8765` (or run `enable_autolaunch.bat` once to launch automatically alongside the game).
+4. Want to explore without the game open? Toggle **`SIM ON`** in the top bar to run the built-in 16-car 50Hz race simulator.
 
 ---
 
-## 🎙️ Voice Commands ("Speak What You See")
-
-Arm **`VOICE MIC ON`** in the top bar (persists automatically across launches). Speak naturally — no wake-word needed:
-
-| Say Any Of These... | PitWall Action |
-| :--- | :--- |
-| **`"Super Comms"`** / **`"Golden Stack"`** | Arms the golden **★ SUPER COMMS** full co-pilot stack (`Auto Boost` + `Auto Card` + `Auto Tire` + `Auto Pit` + `Push Now`) |
-| **`"Extreme AI"`** / **`"P1 Mimic"`** | Syncs Card Strategist to the **`80.7K` Extreme AI Quad-`6/6` Blueprint** |
-| **`"Push"`** / **`"Overtake"`** / **`"Send It"`** | Fires active **PUSH / BOOST** macro (`K1 Super`, `Slingshot`, `Apex Exit`, etc.) |
-| **`"Box Box"`** / **`"Pit This Lap"`** | Arms **PIT THIS LAP** & selects optimal dry/wet tire compound |
-| **`"Cancel Pit"`** / **`"Stay Out"`** | Cancels pending pit entry (`STAY OUT`) |
-| **`"Auto Card"`** / **`"Auto Upgrade"`** | Toggles **AUTO CARD** instant card-picker (`ON` / `OFF`) |
-| **`"Card One"`**, **`"Card Two"`**, **`"Card Three"`** | Immediately picks Upgrade Card slot `1`, `2`, or `3` (or say the card's name!) |
-| **`"Auto Tire"`** / **`"Auto Pit"`** / **`"Pit Guard"`** | Toggles automatic compound selection, automatic pit-window entry, or double-stack protection |
-| **`"Pace Attack"`**, **`"Balanced"`**, **`"Conserve"`** | Switches Race Engineer target pace & boost deployment threshold |
-| **`"Softs"`**, **`"Mediums"`**, **`"Hards"`**, **`"Wets"`** | Pre-selects next pit-stop tire compound |
-| **`"Status"`** / **`"Sitrep"`** / **`"Tire Check"`** | Engineer reads live gap ahead/behind, tire life %, and pit window over radio |
-| **`"Quiet"`** / **`"Radio Check"`** | Mutes or tests Pit-Radio Engineer voice |
-
----
-
-## ⌨️ Zero-`Alt+Tab` In-Game Hotkeys
-
-Active **only** when `BackseatChampions.exe` is the active foreground window (toggle via **`HOTKEYS: ON`** in the top bar):
-
-| In-Game Key / Mouse Button | PitWall Command |
-| :--- | :--- |
-| **`F5`** / **`Mouse Button 5 (Forward)`** / **`Numpad 0`** | **PUSH NOW** (Deploy active Boost / Overtake macro) |
-| **`F6`** / **`Mouse Button 4 (Back)`** / **`Numpad .`** | **BOX THIS LAP** (Toggle Pit Request + Auto-Compound) |
-| **`F7`** | Toggle **AUTO CARD** (`ON` / `OFF`) |
-| **`F8`** | Request **LIVE SITREP** over Pit Radio |
-| **`Numpad 1` / `2` / `3`** | Pick **Upgrade Card `1` / `2` / `3`** |
-| **`Numpad 4`** | Cycle **Pace Mode** (`CONSERVE` → `BALANCED` → `ATTACK`) |
-| **`Numpad 5`** | Toggle **AUTO TIRE** |
-| **`Numpad 6`** | Toggle **PIT GUARD** |
-| **`Numpad 9`** | Toggle **`MINI HUD`** (`1280×136` Always-on-Top Strip ↔ Full Cockpit) |
-
----
-
-## 🛠️ Custom Crew Studio (`.zip` Voice Packs)
-
-Want your own voice, your league director, or a friend calling your race strategy?
-1. Click **`CREW STUDIO 🎙️`** in the top-right bar of SWOOZ PitWall.
-2. Enter a **Pack Name** and click **Create Pack**.
-3. Record directly from your mic in-browser or drop `.wav` / `.mp3` / `.ogg` clips onto any event slot (`pit_entry`, `critical_tires`, `super_boost`, `card_pick`, `final_lap`, `p1_lead`, etc.).
-4. Click **`EXPORT .ZIP`** to share your voice pack on Discord, or **`IMPORT .ZIP`** to load a pack made by the community!
-
----
-
-## 🗂️ Repository Structure
+## Repository Layout
 
 ```text
 backseat-pitwall/
-├── server.py                  # Local HTTP/SSE server + zero-lag WinRT TTS & radio cache
-├── engine.py                  # 50Hz UDP telemetry state machine, undercut & boost co-pilot
-├── bc_api.py                  # Binary UDP packet parser & command encoder (ports 29770/29771)
-├── card_strategist.py         # 80.7K Extreme AI GBDT-calibrated upgrade card strategist
-├── loadout_manager.py         # 5-slot Push Macro & Card Strategy custom loadout lab
-├── swooz_persona.py           # Pit-Radio callout phrasing & Crew Studio persona manager
-├── simulator.py               # Built-in 16-car 50Hz Grand Prix physics & card simulator
-├── pitwall_companion.pyw      # Frameless launcher, Steam auto-watcher & Win32 global hotkeys
-├── static/                    # Zero-scroll HTML5/CSS3/Canvas cockpit + browser standalone sim
-├── build_swooz_liveries.py    # Procedural 9-car livery generator — SWOOZ Works (#1)
-├── build_swooz91_liveries.py  # Procedural 9-car livery generator — SWOOZ Heritage '91 (#91)
-└── pack_release.py            # Release bundler for Community Desktop (.zip) & Web Demo (.zip)
+├── server.py               # Asyncio HTTP/WebSocket server, UDP bridge & local WinRT TTS worker
+├── engine.py               # 50Hz telemetry state, stint/undercut math & co-pilot controllers
+├── public_suite.py         # 3D proximity radar, rival spy, TV director & Elo/Discord league engine
+├── bc_api.py               # Binary UDP packet decoder & command builder (ports 29770/29771)
+├── card_strategist.py      # Upgrade hand evaluator & archived P1 blueprint loader
+├── loadout_manager.py      # 5-slot Push & Card build customizer
+├── swooz_persona.py        # Custom Crew Studio voice pack recorder & .zip importer/exporter
+├── simulator.py            # Standalone 50Hz 16-car race simulator for testing
+├── pitwall_companion.pyw   # Frameless window helper, auto-launcher & Win32 hotkey reader
+├── static/                 # HTML/CSS/Canvas UI + browser demo simulator
+└── pack_release.py         # Builds single-file HTML, Web .zip, and Community .zip
 ```
 
----
+## License
 
-## 🔗 Links
-
-- **Itch.io (Download Windows App + Play Live Web Demo in Browser):** [dom-swooz.itch.io/swooz-pitwall](https://dom-swooz.itch.io/swooz-pitwall)
-- **Backseat Champions on Steam:** [store.steampowered.com/app/2174510/Backseat_Champions](https://store.steampowered.com/app/2174510/Backseat_Champions/)
-
----
-
-*Built with passion for the **Backseat Champions** community by **DOM_SWOOZ**.* 🏁
+MIT License — see [LICENSE](LICENSE). Built by **Dom_Swooz** for the *Backseat Champions* community.
