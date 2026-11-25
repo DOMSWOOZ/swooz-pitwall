@@ -2749,7 +2749,14 @@
       const micBtn = document.getElementById("btn-mic-toggle");
       if (micBtn) {
         micBtn.classList.toggle("mic-live", micEnabled);
-        micBtn.textContent = micEnabled ? "MIC LIVE [V]" : "MIC OFF [V]";
+        if (overrideState === "matched" && heardText) {
+          const cleanAct = String(heardText).replace(/^"[^"]+"\s*→\s*/, "");
+          micBtn.textContent = (cleanAct || heardText).slice(0, 18);
+        } else if (overrideState === "error" && heardText) {
+          micBtn.textContent = heardText.slice(0, 22);
+        } else {
+          micBtn.textContent = micEnabled ? "MIC LIVE [V]" : "MIC OFF [V]";
+        }
       }
       if (!bar || !stLbl || !hdLbl) return;
       if (!micEnabled) {
@@ -2762,6 +2769,12 @@
         bar.className = "voice-cmd-bar mono matched";
         stLbl.textContent = "CMD EXECUTED";
         if (heardText) hdLbl.textContent = heardText;
+        return;
+      }
+      if (overrideState === "error") {
+        bar.className = "voice-cmd-bar mono";
+        stLbl.textContent = "VOICE ERROR";
+        if (heardText !== null) hdLbl.textContent = heardText;
         return;
       }
       bar.className = "voice-cmd-bar mono listening";
@@ -3597,7 +3610,10 @@
     function toggleVoiceMic() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) {
-        updateVoiceBarUI(null, "Speech recognition requires Chrome / Edge.");
+        const msg = !window.isSecureContext
+          ? "Mic blocked: open over localhost, HTTPS, or Chrome secure-origin flag."
+          : "Speech recognition requires Chrome / Edge.";
+        updateVoiceBarUI("error", msg);
         return;
       }
       try { ensureAudioCtx(); } catch (_) {}
@@ -3613,21 +3629,40 @@
         return;
       }
 
-      startMicWaveformCapture();
+      const ua = navigator.userAgent || "";
+      const isAndroidUA = /Android/i.test(ua);
+      const isMobileVoiceClient = isAndroidUA || /iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.maxTouchPoints > 1 && window.innerWidth <= 1100);
+      // On Android / mobile browsers, getUserMedia holds exclusive hardware AudioRecord and starves SpeechRecognition.
+      if (isMobileVoiceClient) {
+        stopMicWaveformCapture();
+      } else {
+        startMicWaveformCapture();
+      }
 
       const startRec = () => {
         if (!micEnabled) return;
         const rec = new SR();
         const executedSlots = new Set();
         let interimSettleTimer = null;
-        rec.lang = "en-US";
-        rec.continuous = true;
+        let lastErrCode = "";
+        let hadSpeechResult = false;
+        rec.lang = navigator.language && navigator.language.startsWith("en") ? navigator.language : "en-US";
+        rec.continuous = !isAndroidUA;
         rec.interimResults = true;
         rec.maxAlternatives = 4;
 
+        rec.onsoundstart = () => {
+          speechInterimKickUntil = performance.now() + 750;
+        };
+        rec.onspeechstart = () => {
+          speechInterimKickUntil = performance.now() + 1100;
+          updateVoiceBarUI(null, "Listening… speak command");
+        };
+
         rec.onresult = (ev) => {
           if (!micEnabled) return;
-          speechInterimKickUntil = performance.now() + 260;
+          hadSpeechResult = true;
+          speechInterimKickUntil = performance.now() + 650;
           if (interimSettleTimer) {
             clearTimeout(interimSettleTimer);
             interimSettleTimer = null;
@@ -3682,10 +3717,21 @@
         };
 
         rec.onerror = (ev) => {
-          if (ev.error === "not-allowed" || ev.error === "service-not-allowed") {
+          lastErrCode = String(ev?.error || "");
+          if (lastErrCode === "not-allowed" || lastErrCode === "service-not-allowed") {
             micEnabled = false;
             stopMicWaveformCapture();
-            updateVoiceBarUI(null, "Mic permission blocked — allow microphone in browser.");
+            const msg = !window.isSecureContext
+              ? "Blocked on LAN HTTP — add URL in chrome://flags"
+              : "Mic permission blocked — allow microphone in browser.";
+            updateVoiceBarUI("error", msg);
+          } else if (lastErrCode === "audio-capture") {
+            stopMicWaveformCapture();
+            updateVoiceBarUI("error", "Mic hardware busy (audio-capture) — retrying");
+          } else if (lastErrCode === "network") {
+            updateVoiceBarUI("error", "Speech network err — check Google speech access");
+          } else if (lastErrCode && lastErrCode !== "no-speech" && lastErrCode !== "aborted") {
+            updateVoiceBarUI("error", `Speech err: ${lastErrCode}`);
           }
         };
 
@@ -3695,19 +3741,22 @@
             interimSettleTimer = null;
           }
           if (micEnabled) {
+            const delayMs = lastErrCode === "network" ? 1200 : lastErrCode === "no-speech" && !hadSpeechResult ? 450 : 60;
             setTimeout(() => {
               if (micEnabled) {
                 try { startRec(); } catch (_) {}
               }
-            }, 25);
+            }, delayMs);
           }
         };
 
         speechRec = rec;
         try {
           rec.start();
-          updateVoiceBarUI(null, 'Zero-Lag Barge-In Active — yell any button ("Box", "Push", "Hammer", "Wet"…)');
-        } catch (_) {}
+          updateVoiceBarUI(null, 'Voice Comms Active — say any button ("Box", "Push", "Hammer", "Wet"…)');
+        } catch (err) {
+          updateVoiceBarUI("error", `Mic start err: ${err?.message || err}`);
+        }
       };
 
       startRec();
