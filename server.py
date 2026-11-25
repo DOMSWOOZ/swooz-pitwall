@@ -1269,6 +1269,13 @@ class PitWallHub:
                     "INFO",
                     cooldown_s=1.0,
                 )
+            elif sys.platform != "win32" or self.telemetry_source_ip is not None:
+                self.engine.emit_radio(
+                    f"start_deck_{time.monotonic()}",
+                    "Grid launch isn't exposed in the UDP API yet — hold [A] / Spacebar directly on your Steam Deck to start!",
+                    "INFO",
+                    cooldown_s=1.0,
+                )
             else:
                 self.sim = DemoRaceSimulator()
                 self.sim_enabled = True

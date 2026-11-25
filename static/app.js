@@ -2755,7 +2755,8 @@
         } else if (overrideState === "error" && heardText) {
           micBtn.textContent = heardText.slice(0, 22);
         } else {
-          micBtn.textContent = micEnabled ? "MIC LIVE [V]" : "MIC OFF [V]";
+          const isAnd = /Android/i.test(navigator.userAgent || "");
+          micBtn.textContent = micEnabled ? (isAnd ? "LISTEN…" : "MIC LIVE [V]") : (isAnd ? "MIC PTT [V]" : "MIC OFF [V]");
         }
       }
       if (!bar || !stLbl || !hdLbl) return;
@@ -3639,8 +3640,6 @@
         startMicWaveformCapture();
       }
 
-      let idleAndroidCycles = 0;
-
       const startRec = () => {
         if (!micEnabled) return;
         const rec = new SR();
@@ -3648,9 +3647,10 @@
         let interimSettleTimer = null;
         let lastErrCode = "";
         let hadSpeechResult = false;
+        let matchedAnyCmd = false;
         rec.lang = navigator.language && navigator.language.startsWith("en") ? navigator.language : "en-US";
-        // Keep continuous=true on Android too now that getUserMedia is disabled on mobile (avoids endless start/stop chime loops).
-        rec.continuous = true;
+        // Desktop Chrome/Edge supports quiet continuous open-mic; Android Chrome uses reliable single-shot PTT (no looping activation chimes).
+        rec.continuous = !isAndroidUA;
         rec.interimResults = true;
         rec.maxAlternatives = 4;
 
@@ -3658,7 +3658,6 @@
           speechInterimKickUntil = performance.now() + 750;
         };
         rec.onspeechstart = () => {
-          idleAndroidCycles = 0;
           speechInterimKickUntil = performance.now() + 1100;
           updateVoiceBarUI(null, "Listening… speak command");
         };
@@ -3666,7 +3665,6 @@
         rec.onresult = (ev) => {
           if (!micEnabled) return;
           hadSpeechResult = true;
-          idleAndroidCycles = 0;
           speechInterimKickUntil = performance.now() + 650;
           if (interimSettleTimer) {
             clearTimeout(interimSettleTimer);
@@ -3685,6 +3683,7 @@
                 const alt = (res[a]?.transcript || "").trim();
                 if (alt && executeVoiceCommand(alt)) {
                   executedSlots.add(i);
+                  matchedAnyCmd = true;
                   matched = true;
                   break;
                 }
@@ -3699,6 +3698,7 @@
               if (!isInterimPrefixAmbiguous(low)) {
                 if (executeVoiceCommand(topPhrase)) {
                   executedSlots.add(i);
+                  matchedAnyCmd = true;
                 } else {
                   updateVoiceBarUI(null, `… "${topPhrase}"`);
                 }
@@ -3712,6 +3712,7 @@
                     if (micEnabled && !executedSlots.has(slotIdx)) {
                       if (executeVoiceCommand(snapPhrase)) {
                         executedSlots.add(slotIdx);
+                        matchedAnyCmd = true;
                       }
                     }
                   }, 340);
@@ -3732,7 +3733,7 @@
             updateVoiceBarUI("error", msg);
           } else if (lastErrCode === "audio-capture") {
             stopMicWaveformCapture();
-            updateVoiceBarUI("error", "Mic hardware busy (audio-capture) — retrying");
+            updateVoiceBarUI("error", "Mic hardware busy (audio-capture)");
           } else if (lastErrCode === "network") {
             updateVoiceBarUI("error", "Speech network err — check Google speech access");
           } else if (lastErrCode && lastErrCode !== "no-speech" && lastErrCode !== "aborted") {
@@ -3745,30 +3746,33 @@
             clearTimeout(interimSettleTimer);
             interimSettleTimer = null;
           }
-          if (micEnabled) {
-            if (isAndroidUA && !hadSpeechResult) {
-              idleAndroidCycles += 1;
-              if (idleAndroidCycles >= 2) {
-                micEnabled = false;
-                try { localStorage.setItem("bc_mic_auto", "0"); } catch (_) {}
-                updateVoiceBarUI(null, "Mic idle — tap MIC [V] to talk");
-                return;
-              }
+          if (!micEnabled) return;
+          if (isAndroidUA) {
+            // Single-shot PTT on Android: finish cleanly without looping Android's SpeechRecognizer chime.
+            micEnabled = false;
+            try { localStorage.setItem("bc_mic_auto", "0"); } catch (_) {}
+            if (!matchedAnyCmd && !lastErrCode.startsWith("not-allowed")) {
+              updateVoiceBarUI(null, hadSpeechResult ? "Tap MIC PTT [V] for next command" : "No command heard — tap MIC PTT [V]");
+            } else {
+              const micBtnEl = document.getElementById("btn-mic-toggle");
+              if (micBtnEl) micBtnEl.classList.remove("mic-live");
             }
-            const delayMs = lastErrCode === "network" ? 1800 : !hadSpeechResult ? 1200 : 120;
-            setTimeout(() => {
-              if (micEnabled) {
-                try { startRec(); } catch (_) {}
-              }
-            }, delayMs);
+            return;
           }
+          const delayMs = lastErrCode === "network" ? 1800 : !hadSpeechResult ? 900 : 120;
+          setTimeout(() => {
+            if (micEnabled) {
+              try { startRec(); } catch (_) {}
+            }
+          }, delayMs);
         };
 
         speechRec = rec;
         try {
           rec.start();
-          updateVoiceBarUI(null, 'Voice Comms Active — say any button ("Box", "Push", "Hammer", "Wet"…)');
+          updateVoiceBarUI(null, isAndroidUA ? 'Listening — say one command ("Box", "Push", "Hammer"…)' : 'Voice Comms Active — say any button ("Box", "Push", "Hammer", "Wet"…)');
         } catch (err) {
+          micEnabled = false;
           updateVoiceBarUI("error", `Mic start err: ${err?.message || err}`);
         }
       };
@@ -5033,15 +5037,17 @@
   applyDeviceMode();
   applySpecialRoleModes();
   bindEvents();
+  if (typeof window.updateVoiceBarUI === "function") window.updateVoiceBarUI();
   connectWS();
   requestAnimationFrame(drawRadioWaveformLoop);
 
-  // Auto-arm Hands-Free Voice Mic on launch (remembers preference; defaults ON for local Desktop App!)
+  // Auto-arm Hands-Free Voice Mic on Desktop launch (remembers preference; Android uses explicit clean 1-tap PTT)
   setTimeout(() => {
     try {
+      const isAnd = /Android/i.test(navigator.userAgent || "");
       const savedMic = localStorage.getItem("bc_mic_auto");
       const isLocalApp = location.hostname === "127.0.0.1" || location.hostname === "localhost";
-      if (!micEnabled && (savedMic === "1" || (savedMic === null && isLocalApp))) {
+      if (!isAnd && !micEnabled && (savedMic === "1" || (savedMic === null && isLocalApp))) {
         toggleVoiceMic();
       }
     } catch (_) {}
