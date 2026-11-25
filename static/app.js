@@ -138,6 +138,25 @@
 
   let deviceModePref = localStorage.getItem("bc_device_mode") || "auto";
   if (!["auto", "slab", "fold", "tablet", "desktop"].includes(deviceModePref)) deviceModePref = "auto";
+  let hudTierPref = localStorage.getItem("bc_hud_tier") || "clean";
+  if (!["clean", "pro"].includes(hudTierPref)) hudTierPref = "clean";
+
+  function applyHudTier() {
+    if (obsSplitPanel || obsOverlayActive) {
+      document.body.dataset.hud = "pro";
+      return;
+    }
+    document.body.dataset.hud = hudTierPref;
+    const hudBtn = document.getElementById("btn-hud-tier");
+    if (hudBtn) {
+      const isPro = hudTierPref === "pro";
+      hudBtn.textContent = isPro ? "HUD: PRO" : "HUD: CLEAN";
+      hudBtn.classList.toggle("active", isPro);
+    }
+    requestAnimationFrame(() => {
+      if (snap) renderAll();
+    });
+  }
 
   function computeAutoDeviceMode() {
     const w = window.innerWidth || document.documentElement.clientWidth || 1280;
@@ -158,6 +177,7 @@
   }
 
   function applyDeviceMode() {
+    applyHudTier();
     if (obsSplitPanel || obsOverlayActive) {
       document.body.dataset.device = "desktop";
       requestAnimationFrame(() => { if (snap) renderAll(); });
@@ -2518,7 +2538,15 @@
       sendAction({ action: "test_radio" });
     });
 
-    // Responsive Form-Factor Switcher (AUTO · PHONE · FOLD · TABLET · PC) + Mobile Bottom Thumb Dock
+    // Responsive Form-Factor Switcher (AUTO · PHONE · FOLD · TABLET · PC) + HUD CLEAN/PRO + Thumb Dock
+    const hudTierBtn = document.getElementById("btn-hud-tier");
+    if (hudTierBtn) {
+      hudTierBtn.addEventListener("click", () => {
+        hudTierPref = hudTierPref === "clean" ? "pro" : "clean";
+        try { localStorage.setItem("bc_hud_tier", hudTierPref); } catch (_) {}
+        applyHudTier();
+      });
+    }
     const devModeBtn = document.getElementById("btn-device-mode");
     if (devModeBtn) {
       devModeBtn.addEventListener("click", () => {
@@ -2985,6 +3013,22 @@
         const nextMh = hasWord("off") ? false : (hasWord("on") ? true : !snap?.overlay?.mini_hud);
         sendAction({ action: "set_overlay", key: "mini_hud", value: nextMh });
         flashVoiceMatch(rawText, `MINI HUD: ${nextMh ? "ON" : "OFF"}`, "#btn-mini-hud");
+        return true;
+      }
+      if (has("clean mode", "clean hud", "simple mode", "minimal mode")) {
+        lastVoiceCmdMs = now;
+        hudTierPref = "clean";
+        try { localStorage.setItem("bc_hud_tier", hudTierPref); } catch (_) {}
+        applyHudTier();
+        flashVoiceMatch(rawText, "HUD // CLEAN", "#btn-hud-tier");
+        return true;
+      }
+      if (has("pro mode", "pro hud", "full telemetry", "engineer telemetry")) {
+        lastVoiceCmdMs = now;
+        hudTierPref = "pro";
+        try { localStorage.setItem("bc_hud_tier", hudTierPref); } catch (_) {}
+        applyHudTier();
+        flashVoiceMatch(rawText, "HUD // PRO", "#btn-hud-tier");
         return true;
       }
       if (has("slab mode", "phone mode", "slab view", "phone view", "bar phone")) {
