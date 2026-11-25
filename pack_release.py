@@ -47,28 +47,37 @@ def build_web_zip() -> None:
 
 def build_community_itch_zip() -> None:
     readme_txt = """========================================================================
-  SWOOZ PITWALL — LIVE RACE ENGINEER & TEAM COMMS (Community Edition)
-  Created by Dom_Swooz for Backseat Champions (v0.88.2+ Telemetry API)
+  SWOOZ PITWALL - LIVE RACE ENGINEER & TEAM COMMS (Community Edition)
+  Built by DOMSWOOZ for Backseat Champions (v0.88.2+ Telemetry API)
   Backseat Champions on Steam: https://store.steampowered.com/app/2174510/Backseat_Champions/
-  Itch.io Page & Live Demo:    https://dom-swooz.itch.io/swooz-pitwall
+  Itch.io Page & Web Demo:    https://dom-swooz.itch.io/swooz-pitwall
   GitHub Source & Full Docs:   https://github.com/DOMSWOOZ/swooz-pitwall
 ========================================================================
 
-QUICK START (ZERO SETUP):
-1. Make sure Python 3.10+ is installed on Windows (https://python.org).
+QUICK START (WINDOWS):
+1. Make sure Python 3.10+ is installed (https://python.org).
 2. Double-click `start_pitwall.bat` (or run `enable_autolaunch.bat` once so
-   SWOOZ PitWall pops up automatically whenever Backseat Champions starts!).
+   PitWall opens automatically whenever Backseat Champions starts).
 3. In Backseat Champions -> Settings -> Telemetry:
-   - Enable Telemetry Out (`127.0.0.1`, Port `29770`)
-   - Enable Player/Driver Commands (`127.0.0.1`, Port `29771`)
-   - (Optional) Race Results URL: `http://127.0.0.1:8765/race-results`
+   - Check Enable API ON
+   - Keep Listen IP / Port at `127.0.0.1` : `29771` and Player Input ON
+   - Under Broadcast: check Player Data, Decision Events, and Driver Data
+   - Keep Targets at `127.0.0.1` : `29770` (50 Hz)
+   - (Optional) Race Results Endpoint: `http://127.0.0.1:8765/race-results`
 
-WHAT'S INSIDE:
-- Live Zero-Lag Pit-Radio Comms (~45ms local WinRT synthesis + 90s V10 FX + 60 FPS Dual-Channel Oscilloscope)
-- Hands-Free "Read-What-You-See" Voice Commands (Press [V] and read ANY button on screen aloud!)
-- Zero-Alt-Tab Mode: In-Game Hotkeys (F5/MB5=Push, F6/MB4=Box, F7=Auto Card, F8=Sitrep, Num1-3=Pick Card, Num9=Mini HUD) + Instant Game Refocus!
-- Extreme AI 80.7K Sync + 5-Slot Push Mode Lab & 5-Slot Card Build Strategy Lab (Customize or import from any P1 `.results.json` race!)
-- Custom Crew Voice Studio: Choose from 11 regional engineers, or record & share your own `.zip` voice packs!
+QUICK START (STEAM DECK / LINUX):
+1. Open Terminal / Konsole inside this folder and run:
+   ./start_pitwall_steamos.sh
+2. Open the printed `http://<LAN-IP>:8765` link on any phone, foldable, or tablet.
+
+WHAT IS INCLUDED:
+- Clean default layout (`HUD: CLEAN`) with 1-click toggle to `HUD: PRO` telemetry plots
+- Responsive `AUTO` layout adapting to Desktop, Foldable/Tablet, and Phone screens
+- Local race engineer radio with optional pit-radio EQ and Web Speech fallback on Linux
+- Push-to-talk `[V]` voice triggers and optional Windows in-game hotkeys (F5-F8, Numpad)
+- Extreme AI strategy weights, 5-slot Boost/Card editor, Crew Voice Studio, and OBS overlays
+
+AI-assisted coding workflow under DOMSWOOZ visual design and race testing direction.
 """
     readme_path = os.path.join(ROOT, "README_COMMUNITY.txt")
     with open(readme_path, "w", encoding="utf-8") as f:
