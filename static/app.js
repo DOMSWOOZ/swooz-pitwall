@@ -125,7 +125,7 @@
     volume: Number(localStorage.getItem("bc_vol") || 88) / 100,
   };
 
-  // ==================== RESPONSIVE COCKPIT FORM-FACTOR CONTROLLER (SLAB · FOLD · DESKTOP) ====================
+  // ==================== RESPONSIVE COCKPIT FORM-FACTOR CONTROLLER (PHONE · FOLD · TABLET · PC) ====================
   const initUrlParams = new URLSearchParams(location.search);
   let obsOverlayActive = initUrlParams.get("obs") === "1";
   let obsSplitPanel = initUrlParams.get("obs_panel") || ""; // "right" | "bottom"
@@ -137,16 +137,22 @@
   let leagueHumansOnly = false;
 
   let deviceModePref = localStorage.getItem("bc_device_mode") || "auto";
-  if (!["auto", "slab", "fold", "desktop"].includes(deviceModePref)) deviceModePref = "auto";
+  if (!["auto", "slab", "fold", "tablet", "desktop"].includes(deviceModePref)) deviceModePref = "auto";
 
   function computeAutoDeviceMode() {
     const w = window.innerWidth || document.documentElement.clientWidth || 1280;
     const h = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 800);
     const ar = w / h;
-    // Narrow bar smartphone / folded cover display
-    if (w < 600) return "slab";
-    // Unfolded foldable inner display (portrait / near-square e.g. Z Fold / Pixel Fold) or compact tablet
-    if (w <= 1180 || ar < 1.32) return "fold";
+    const isTouch = Boolean(
+      (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ||
+      (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)
+    );
+    // Any bar smartphone / narrow portrait phone -> bottom thumb dock
+    if (w < 640 || (isTouch && h > w && Math.min(w, h) < 620)) return "slab";
+    // Landscape phone or unfolded foldable inner display (near-square split layout)
+    if ((isTouch && h < 540 && w >= 640) || (w <= 980 && ar < 1.28)) return "fold";
+    // Any capable tablet (portrait or landscape) or compact touch window
+    if ((isTouch && w <= 1380) || w <= 1220) return "tablet";
     // Full widescreen desktop / Ultrawide broadcast cockpit
     return "desktop";
   }
@@ -161,13 +167,12 @@
     document.body.dataset.device = effective;
     const btn = document.getElementById("btn-device-mode");
     if (btn) {
-      const shortMap = { slab: "SLAB", fold: "FOLD", desktop: "DESK" };
-      const iconMap = { slab: "SLAB", fold: "FOLD", desktop: "DESK" };
+      const labelMap = { slab: "PHONE", fold: "FOLD", tablet: "TAB", desktop: "PC" };
       if (deviceModePref === "auto") {
-        btn.textContent = `AUTO · ${shortMap[effective] || "DESK"}`;
+        btn.textContent = `AUTO · ${labelMap[effective] || "PC"}`;
         btn.classList.remove("active");
       } else {
-        btn.textContent = `VIEW: ${iconMap[deviceModePref] || "DESK"}`;
+        btn.textContent = `VIEW: ${labelMap[deviceModePref] || "PC"}`;
         btn.classList.add("active");
       }
     }
@@ -507,7 +512,7 @@
         signal: abortCtrl.signal,
       });
       if (!res.ok) {
-        if (res.status === 404 || res.status === 405) staticTtsUnavailable = true;
+        if (res.status === 404 || res.status === 405 || res.status === 503) staticTtsUnavailable = true;
         throw new Error("TTS HTTP error");
       }
       const cacheHdr = res.headers.get("X-TTS-Cache") || "LOCAL";
@@ -2513,11 +2518,11 @@
       sendAction({ action: "test_radio" });
     });
 
-    // Responsive Form-Factor Switcher (AUTO · SLAB · FOLD · DESKTOP) + Slab Bottom Thumb Dock
+    // Responsive Form-Factor Switcher (AUTO · PHONE · FOLD · TABLET · PC) + Mobile Bottom Thumb Dock
     const devModeBtn = document.getElementById("btn-device-mode");
     if (devModeBtn) {
       devModeBtn.addEventListener("click", () => {
-        const order = ["auto", "slab", "fold", "desktop"];
+        const order = ["auto", "slab", "fold", "tablet", "desktop"];
         deviceModePref = order[(order.indexOf(deviceModePref) + 1) % order.length];
         try { localStorage.setItem("bc_device_mode", deviceModePref); } catch (_) {}
         applyDeviceMode();
@@ -2945,10 +2950,10 @@
         flashVoiceMatch(rawText, voiceEnabled ? "RADIO ON" : "RADIO MUTE", "#btn-voice-toggle");
         return true;
       }
-      if (isExact("iphone") || has("open on iphone", "qr code")) {
+      if (isExact("iphone") || has("open on phone", "open on tablet", "connect device", "mobile link", "qr code")) {
         lastVoiceCmdMs = now;
         document.getElementById("btn-iphone-share")?.click();
-        flashVoiceMatch(rawText, "IPHONE QR", "#btn-iphone-share");
+        flashVoiceMatch(rawText, "DEVICE QR", "#btn-iphone-share");
         return true;
       }
       if (has("send udp ping", "udp ping")) {
@@ -2982,12 +2987,12 @@
         flashVoiceMatch(rawText, `MINI HUD: ${nextMh ? "ON" : "OFF"}`, "#btn-mini-hud");
         return true;
       }
-      if (has("slab mode", "phone mode", "slab view", "bar phone")) {
+      if (has("slab mode", "phone mode", "slab view", "phone view", "bar phone")) {
         lastVoiceCmdMs = now;
         deviceModePref = "slab";
         try { localStorage.setItem("bc_device_mode", deviceModePref); } catch (_) {}
         applyDeviceMode();
-        flashVoiceMatch(rawText, "VIEW // SLAB", "#btn-device-mode");
+        flashVoiceMatch(rawText, "VIEW // PHONE", "#btn-device-mode");
         return true;
       }
       if (has("battle cam", "battle camera")) {
@@ -3047,12 +3052,20 @@
         flashVoiceMatch(rawText, "VIEW // FOLD", "#btn-device-mode");
         return true;
       }
-      if (has("desktop mode", "desktop view", "widescreen mode")) {
+      if (has("tablet mode", "tablet view", "ipad mode", "ipad view")) {
+        lastVoiceCmdMs = now;
+        deviceModePref = "tablet";
+        try { localStorage.setItem("bc_device_mode", deviceModePref); } catch (_) {}
+        applyDeviceMode();
+        flashVoiceMatch(rawText, "VIEW // TABLET", "#btn-device-mode");
+        return true;
+      }
+      if (has("desktop mode", "desktop view", "pc mode", "widescreen mode")) {
         lastVoiceCmdMs = now;
         deviceModePref = "desktop";
         try { localStorage.setItem("bc_device_mode", deviceModePref); } catch (_) {}
         applyDeviceMode();
-        flashVoiceMatch(rawText, "VIEW // DESKTOP", "#btn-device-mode");
+        flashVoiceMatch(rawText, "VIEW // PC", "#btn-device-mode");
         return true;
       }
       if (has("auto view", "auto layout", "auto screen")) {
@@ -4222,7 +4235,7 @@
               ${studioRecSlot === s.id ? "■ STOP" : "● REC"}
             </button>
             <button class="sw-btn play" data-sw-play="${s.id}" data-sw-script="${escAttr(s.effective_line || s.script)}" title="Audition through 90s V10 FX">▶ V10 TEST</button>
-            <label class="sw-btn" title="Upload .wav / .m4a / .mp3 from iPhone or PC">
+            <label class="sw-btn" title="Upload .wav / .m4a / .mp3 from phone, tablet, or PC">
               LOAD WAV
               <input type="file" accept="audio/*" data-sw-file="${s.id}" style="display:none" />
             </label>
@@ -4633,6 +4646,13 @@
                 crew: d.crew_url || `${d.lan_url}/?role=crew`,
                 obs: d.obs_url || "http://127.0.0.1:8765/?obs=1",
               };
+            }
+            const descEl = document.getElementById("qr-hub-desc");
+            if (descEl && d.lan_ip) {
+              const srcTxt = d.telemetry_source_ip ? `${d.telemetry_source_ip}:${d.command_port || 29771} (LIVE)` : `${d.cmd_host || "127.0.0.1"}:${d.command_port || 29771} (Auto)`;
+              descEl.innerHTML =
+                `<strong>Phones, Foldables &amp; Tablets:</strong> Open <code>${d.lan_url}</code> (or scan QR). Auto-adapts layout or tap <b>AUTO</b> in top bar.<br>` +
+                `<strong>Remote Console / Handheld -> PitWall:</strong> Set <em>Telemetry Out</em> to <code>${d.lan_ip}:${d.telemetry_port || 29770}</code> &middot; Commands auto-lock: <code>${srcTxt}</code>`;
             }
           }
         } catch (_) {}

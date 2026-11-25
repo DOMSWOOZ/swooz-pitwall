@@ -7,6 +7,7 @@ __pycache__/
 .app-profile/
 .tts-cache/
 .watcher.pid
+.watcher.ver
 *.log
 user_loadouts.json
 

@@ -28,7 +28,7 @@ COMPANION_LOG = os.path.join(ROOT_DIR, "companion.log")
 
 APP_URL = "http://127.0.0.1:8765"
 HEALTH_URL = "http://127.0.0.1:8765/api/lan-info"
-REQUIRED_BUILD = "2.4.1-motec-obs-showcase"
+REQUIRED_BUILD = "2.4.2-deck-lan-live"
 STEAM_RUN_URL = "steam://rungameid/2174510"
 WINDOW_TITLE_FRAGMENT = "SWOOZ PitWall"
 GAME_EXE_NAMES = {"backseatchampions.exe", "backseat champions.exe"}

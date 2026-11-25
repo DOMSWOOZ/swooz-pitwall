@@ -1,6 +1,6 @@
 # SWOOZ PitWall — Live 50Hz Race Engineer & Telemetry Client for *Backseat Champions*
 
-Open-source companion app built on top of [*Backseat Champions*' official 50Hz UDP Game API](https://store.steampowered.com/app/2174510/Backseat_Champions/) (`ports 29770 / 29771` + `/race-results` webhook). Runs locally on Windows using the Python standard library (`0` third-party `pip` packages required) and renders in a zero-scroll cockpit for PC monitors, slab phones, and foldable displays.
+Open-source companion app built on top of [*Backseat Champions*' official 50Hz UDP Game API](https://store.steampowered.com/app/2174510/Backseat_Champions/) (`ports 29770 / 29771` + `/race-results` webhook). Runs natively via the Python standard library (`0` third-party `pip` packages required on Windows or SteamOS/Linux) and auto-adapts across desktops, smartphones, foldables, and tablets (`AUTO · PHONE / FOLD / TAB / PC`).
 
 - **Try Live in Browser / Download on Itch.io:** [dom-swooz.itch.io/swooz-pitwall](https://dom-swooz.itch.io/swooz-pitwall)
 - **Get *Backseat Champions* on Steam:** [store.steampowered.com/app/2174510/Backseat_Champions](https://store.steampowered.com/app/2174510/Backseat_Champions/)
@@ -20,7 +20,7 @@ In *Backseat Champions*, public lobbies lock external car and menu commands (`pi
 - **Transparent `1920x1080` OBS Stream Overlay (`?obs=1`):** Add `http://127.0.0.1:8765/?obs=1` as an OBS Browser Source for a clean transparent timing tower, pedal/speed halo, proximity radar, and live radio subtitle strip.
 - **2-Player Co-Op Engineer Link (`?role=crew`):** Open `http://<LAN-IP>:8765/?role=crew` on a second device so a friend can watch your tire cliffs, weather slope, and rival gaps and send 1-tap or custom radio callouts straight into your headset.
 - **Open GP Elo & Points Leaderboard (`OPEN GP` Tab):** Point *Backseat Champions*' **Race Results** URL at `http://127.0.0.1:8765/race-results` when hosting lobbies to track FIA points, pairwise multiplayer Elo ratings, circuit/class lap records, and optional Discord webhook podium posts.
-- **Slab & Foldable Mobile Modes:** Dedicated `AUTO · SLAB` bottom thumb-dock layout for narrow phones (`< 600px`) and `AUTO · FOLD` 50/50 split-screen layout for unfolded foldables in portrait/square orientation.
+- **Adaptive Mobile, Foldable & Tablet Layouts (`AUTO · PHONE / FOLD / TAB / PC`):** Automatically detects touch smartphones (`< 640px` thumb-dock view), unfolded foldables (50/50 dual-pane split), capable tablets (touch-optimized edge-to-edge split cockpit), and desktops — or switch modes anytime from the top bar or by voice.
 
 ![Slab Smartphone vs Unfolded Foldable Split-Screen](docs/mobile_slab_fold.jpg)
 

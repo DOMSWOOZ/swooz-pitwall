@@ -1873,7 +1873,7 @@ h2, .sl-label, .fia-tabs .tab-btn, .deck-tab, .ms-lbl {
 }
 
 @media (min-width: 1181px) and (min-height: 660px) and (min-aspect-ratio: 11/9) {
-  html:not([data-force-mobile]), body:not([data-device="slab"]):not([data-device="fold"]) {
+  html:not([data-force-mobile]), body:not([data-device="slab"]):not([data-device="fold"]):not([data-device="tablet"]) {
     height: 100vh;
     overflow: hidden;
   }
@@ -3186,16 +3186,19 @@ body.mini-hud-mode .mini-hud-strip {
       (Left Pane = Live Circuit Map + 16-Car Timing + Thermals; Right Pane = Stint + Switches + Radio)
    ========================================================================= */
 
-/* --- MODE A: 📖 FOLDABLE / UNFOLDED PORTRAIT SPLIT-SCREEN (`body[data-device="fold"]`) --- */
-body[data-device="fold"] {
+/* --- MODE A: 📖 FOLDABLE & TABLET ADAPTIVE SPLIT COCKPIT (`fold` & `tablet`) --- */
+body[data-device="fold"],
+body[data-device="tablet"] {
   height: 100dvh !important;
   max-height: 100dvh !important;
   overflow: hidden !important;
 }
-body[data-device="fold"] .side-rail {
+body[data-device="fold"] .side-rail,
+body[data-device="tablet"] .side-rail {
   display: none !important;
 }
-body[data-device="fold"] .pitwall-shell {
+body[data-device="fold"] .pitwall-shell,
+body[data-device="tablet"] .pitwall-shell {
   height: calc(100dvh - 7px) !important;
   width: 100% !important;
   max-width: 1120px !important;
@@ -3205,59 +3208,80 @@ body[data-device="fold"] .pitwall-shell {
   flex-direction: column !important;
   min-height: 0 !important;
 }
-body[data-device="fold"] .topbar {
+body[data-device="tablet"] .pitwall-shell {
+  max-width: 100% !important;
+  padding: max(5px, env(safe-area-inset-top)) 10px 8px !important;
+}
+body[data-device="fold"] .topbar,
+body[data-device="tablet"] .topbar {
   display: grid !important;
   grid-template-columns: 1fr auto !important;
   gap: 5px !important;
   flex-shrink: 0 !important;
 }
-body[data-device="fold"] .shiftlight-housing {
+body[data-device="fold"] .shiftlight-housing,
+body[data-device="tablet"] .shiftlight-housing {
   display: none !important;
 }
-body[data-device="fold"] .top-controls {
+body[data-device="fold"] .top-controls,
+body[data-device="tablet"] .top-controls {
   flex-wrap: wrap !important;
   justify-content: flex-end !important;
   gap: 4px !important;
 }
-body[data-device="fold"] .session-ribbon {
+body[data-device="fold"] .session-ribbon,
+body[data-device="tablet"] .session-ribbon {
   margin: 4px 0 5px !important;
   padding: 3px 8px !important;
   font-size: 11px !important;
   flex-shrink: 0 !important;
 }
-/* Hide Windows-desktop-only Win32 window focus pills on touch/fold devices */
+/* Hide Windows-desktop-only Win32 window focus pills on touch/fold/tablet devices */
 body[data-device="fold"] #btn-game-refocus,
 body[data-device="fold"] #btn-global-keys,
 body[data-device="fold"] #btn-pin-top,
-body[data-device="fold"] #btn-mini-hud {
+body[data-device="fold"] #btn-mini-hud,
+body[data-device="tablet"] #btn-game-refocus,
+body[data-device="tablet"] #btn-global-keys,
+body[data-device="tablet"] #btn-pin-top,
+body[data-device="tablet"] #btn-mini-hud {
   display: none !important;
 }
-body[data-device="fold"] .tab-view.active:not(#tab-live) {
+body[data-device="fold"] .tab-view.active:not(#tab-live),
+body[data-device="tablet"] .tab-view.active:not(#tab-live) {
   flex: 1 1 0 !important;
   min-height: 0 !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
-body[data-device="fold"] #tab-live.active {
+body[data-device="fold"] #tab-live.active,
+body[data-device="tablet"] #tab-live.active {
   flex: 1 1 0 !important;
   min-height: 0 !important;
   display: flex !important;
   flex-direction: column !important;
 }
-body[data-device="fold"] #tab-live .pitwall-grid {
+body[data-device="fold"] #tab-live .pitwall-grid,
+body[data-device="tablet"] #tab-live .pitwall-grid {
   flex: 1 1 0 !important;
   min-height: 0 !important;
   height: 100% !important;
   display: grid !important;
-  /* 50/50 Dual-Pane Split across the foldable inner screen with 10px center hinge gutter! */
+  /* 50/50 Dual-Pane Split across foldable crease or tablet touch layout */
   grid-template-columns: minmax(0, 0.97fr) minmax(0, 1.03fr) !important;
   grid-template-rows: minmax(0, 1fr) !important;
   gap: 10px !important;
   align-items: stretch !important;
 }
+body[data-device="tablet"] #tab-live .pitwall-grid {
+  grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr) !important;
+  gap: 12px !important;
+}
 body[data-device="fold"] .fold-left-pane,
-body[data-device="fold"] .right-stack {
+body[data-device="fold"] .right-stack,
+body[data-device="tablet"] .fold-left-pane,
+body[data-device="tablet"] .right-stack {
   display: flex !important;
   flex-direction: column !important;
   gap: 7px !important;
@@ -3270,25 +3294,30 @@ body[data-device="fold"] .right-stack {
   padding-right: 2px;
   grid-column: auto !important;
 }
-/* Put Live Circuit Map + 16-Car Timing Tower right at the top of Left Fold Pane for instant zero-scroll glance! */
-body[data-device="fold"] .fold-left-pane > .center-stack {
+/* Put Live Circuit Map + 16-Car Timing Tower right at the top of Left Fold/Tablet Pane */
+body[data-device="fold"] .fold-left-pane > .center-stack,
+body[data-device="tablet"] .fold-left-pane > .center-stack {
   display: contents !important;
 }
-body[data-device="fold"] .fold-left-pane .map-panel {
+body[data-device="fold"] .fold-left-pane .map-panel,
+body[data-device="tablet"] .fold-left-pane .map-panel {
   order: 1;
   flex-shrink: 0 !important;
   height: auto !important;
 }
-body[data-device="fold"] .fold-left-pane > .tower-panel {
+body[data-device="fold"] .fold-left-pane > .tower-panel,
+body[data-device="tablet"] .fold-left-pane > .tower-panel {
   order: 2;
   height: auto !important;
   flex-shrink: 0 !important;
 }
-body[data-device="fold"] .fold-left-pane .center-mid-split {
+body[data-device="fold"] .fold-left-pane .center-mid-split,
+body[data-device="tablet"] .fold-left-pane .center-mid-split {
   order: 3;
   flex-shrink: 0 !important;
 }
-body[data-device="fold"] .fold-left-pane .trace-panel {
+body[data-device="fold"] .fold-left-pane .trace-panel,
+body[data-device="tablet"] .fold-left-pane .trace-panel {
   order: 4;
   min-height: 155px !important;
   height: 155px !important;
@@ -3297,6 +3326,10 @@ body[data-device="fold"] .fold-left-pane .trace-panel {
 body[data-device="fold"] .map-stage {
   height: 168px !important;
   min-height: 168px !important;
+}
+body[data-device="tablet"] .map-stage {
+  height: 215px !important;
+  min-height: 215px !important;
 }
 body[data-device="fold"] .center-mid-split {
   grid-template-columns: 1fr !important;
@@ -3310,15 +3343,20 @@ body[data-device="fold"] .tower-col-hdr > span:nth-child(4),
 body[data-device="fold"] .fia-row > div:nth-child(4) {
   display: none !important;
 }
-body[data-device="fold"] .stint-arc-layout {
+body[data-device="fold"] .stint-arc-layout,
+body[data-device="tablet"] .stint-arc-layout {
   grid-template-columns: 168px 1fr !important;
   gap: 6px !important;
 }
-body[data-device="fold"] .voice-ctrl-bar {
+body[data-device="fold"] .voice-ctrl-bar,
+body[data-device="tablet"] .voice-ctrl-bar {
   grid-template-columns: 1fr 1fr !important;
 }
 body[data-device="fold"] .radio-feed {
   max-height: 110px !important;
+}
+body[data-device="tablet"] .radio-feed {
+  max-height: 145px !important;
 }
 
 /* --- MODE B: 📱 SLAB SMARTPHONE MODE (`body[data-device="slab"]`) --- */
@@ -3503,9 +3541,10 @@ body[data-device="slab"] .mobile-slab-dock {
   box-shadow: 0 0 12px rgba(255, 123, 0, 0.35);
 }
 
-/* Enlarge touch tap targets & fit 100% of 4-stage / 5-slot / 5-knob rows edge-to-edge on Slab & Fold */
+/* Enlarge touch tap targets & fit 100% of 4-stage / 5-slot / 5-knob rows edge-to-edge on Phone, Fold & Tablet */
 body[data-device="slab"] .fia-panel,
-body[data-device="fold"] .fia-panel {
+body[data-device="fold"] .fia-panel,
+body[data-device="tablet"] .fia-panel {
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
@@ -3516,19 +3555,22 @@ body[data-device="fold"] #cliff-hdr-lbl {
   display: none !important;
 }
 body[data-device="slab"] .switches-panel > .panel-hdr,
-body[data-device="fold"] .switches-panel > .panel-hdr {
+body[data-device="fold"] .switches-panel > .panel-hdr,
+body[data-device="tablet"] .switches-panel > .panel-hdr {
   flex-wrap: wrap !important;
   gap: 4px !important;
 }
 body[data-device="slab"] .pace-selector-bar,
-body[data-device="fold"] .pace-selector-bar {
+body[data-device="fold"] .pace-selector-bar,
+body[data-device="tablet"] .pace-selector-bar {
   display: grid !important;
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   gap: 3px !important;
   padding: 4px 6px !important;
 }
 body[data-device="slab"] .pace-seg,
-body[data-device="fold"] .pace-seg {
+body[data-device="fold"] .pace-seg,
+body[data-device="tablet"] .pace-seg {
   min-width: 0 !important;
   padding: 5px 2px !important;
 }
@@ -3541,14 +3583,16 @@ body[data-device="fold"] .pace-sub {
   font-size: 8px !important;
 }
 body[data-device="slab"] .metallic-switch-bank,
-body[data-device="fold"] .metallic-switch-bank {
+body[data-device="fold"] .metallic-switch-bank,
+body[data-device="tablet"] .metallic-switch-bank {
   display: grid !important;
   grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
   gap: 2px !important;
   padding: 6px 4px !important;
 }
 body[data-device="slab"] .metal-switch-unit,
-body[data-device="fold"] .metal-switch-unit {
+body[data-device="fold"] .metal-switch-unit,
+body[data-device="tablet"] .metal-switch-unit {
   min-width: 0 !important;
 }
 body[data-device="slab"] .metal-knob,
@@ -3564,7 +3608,9 @@ body[data-device="fold"] .ms-lbl {
 body[data-device="slab"] .push-profile-bar,
 body[data-device="slab"] .card-strat-bar,
 body[data-device="fold"] .push-profile-bar,
-body[data-device="fold"] .card-strat-bar {
+body[data-device="fold"] .card-strat-bar,
+body[data-device="tablet"] .push-profile-bar,
+body[data-device="tablet"] .card-strat-bar {
   grid-template-columns: repeat(5, minmax(0, 1fr)) 24px !important;
   gap: 2px !important;
   padding: 0 5px 4px !important;
@@ -3584,7 +3630,8 @@ body[data-device="fold"] .cs-chip {
   text-overflow: ellipsis !important;
 }
 body[data-device="slab"] .briefing-pill-row,
-body[data-device="fold"] .briefing-pill-row {
+body[data-device="fold"] .briefing-pill-row,
+body[data-device="tablet"] .briefing-pill-row {
   display: grid !important;
   grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
   gap: 2px !important;
@@ -3599,27 +3646,32 @@ body[data-device="fold"] .brief-chip {
   text-overflow: ellipsis !important;
 }
 body[data-device="slab"] .fia-box-btn,
-body[data-device="fold"] .fia-box-btn {
+body[data-device="fold"] .fia-box-btn,
+body[data-device="tablet"] .fia-box-btn {
   padding: 8px 10px !important;
   font-size: 13px !important;
 }
 /* Sleek 4px Dark Carbon Motorsport Scrollbars (no 17px white Windows gutter!) */
-body[data-device="slab"] * ,
-body[data-device="fold"] * {
+body[data-device="slab"] *,
+body[data-device="fold"] *,
+body[data-device="tablet"] * {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 123, 0, 0.45) #0b0d12;
 }
 body[data-device="slab"] *::-webkit-scrollbar,
-body[data-device="fold"] *::-webkit-scrollbar {
+body[data-device="fold"] *::-webkit-scrollbar,
+body[data-device="tablet"] *::-webkit-scrollbar {
   width: 4px;
   height: 4px;
 }
 body[data-device="slab"] *::-webkit-scrollbar-track,
-body[data-device="fold"] *::-webkit-scrollbar-track {
+body[data-device="fold"] *::-webkit-scrollbar-track,
+body[data-device="tablet"] *::-webkit-scrollbar-track {
   background: #0b0d12;
 }
 body[data-device="slab"] *::-webkit-scrollbar-thumb,
-body[data-device="fold"] *::-webkit-scrollbar-thumb {
+body[data-device="fold"] *::-webkit-scrollbar-thumb,
+body[data-device="tablet"] *::-webkit-scrollbar-thumb {
   background: rgba(255, 123, 0, 0.5);
   border-radius: 3px;
 }

@@ -1,6 +1,6 @@
 """Build SWOOZ PitWall Community Share Bundles:
 1. `share/Backseat_PitWall_SingleFile.html` — Self-contained interactive web preview
-2. `share/Backseat_PitWall_Web.zip` — Static web deployment archive (Vercel / Netlify / iPhone)
+2. `share/Backseat_PitWall_Web.zip` — Static web deployment archive (Vercel / Netlify / Mobile Browser)
 3. `share/SWOOZ_PitWall_Community_Edition.zip` — Full Ready-to-Share Itch.io PWYW Community Release zip!
 """
 from __future__ import annotations
@@ -86,6 +86,7 @@ WHAT'S INSIDE:
         "server.py",
         "pitwall_companion.pyw",
         "start_pitwall.bat",
+        "start_pitwall_steamos.sh",
         "enable_autolaunch.bat",
         "disable_autolaunch.bat",
         "swooz_pitwall.ico",

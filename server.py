@@ -1,9 +1,9 @@
 """Zero-dependency asyncio server for Backseat Champions F1 Pit Wall.
 
-- UDP Telemetry In:    127.0.0.1:29770
-- UDP Commands Out/In: 127.0.0.1:29771
-- Web UI + WebSocket:  http://127.0.0.1:8765  (ws://127.0.0.1:8765/ws)
-- Race Results Upload: http://127.0.0.1:8765/race-results
+- UDP Telemetry In:    0.0.0.0:29770 (PC 127.0.0.1 + LAN / Steam Deck)
+- UDP Commands Out/In: Auto-targets incoming game host IP :29771
+- Web UI + WebSocket:  http://0.0.0.0:8765  (ws://<LAN-IP>:8765/ws)
+- Race Results Upload: http://<LAN-IP>:8765/race-results
 """
 from __future__ import annotations
 
@@ -581,7 +581,8 @@ class TelemetryUDPProtocol(asyncio.DatagramProtocol):
         self.hub = hub
 
     def datagram_received(self, data: bytes, addr: Any) -> None:
-        self.hub.on_udp_datagram(data, is_reply_sock=False)
+        sender_ip = addr[0] if isinstance(addr, tuple) and addr else None
+        self.hub.on_udp_datagram(data, is_reply_sock=False, sender_ip=sender_ip)
 
     def error_received(self, exc: Exception) -> None:
         pass
@@ -596,7 +597,8 @@ class CommandUDPProtocol(asyncio.DatagramProtocol):
         self.transport = transport  # type: ignore[assignment]
 
     def datagram_received(self, data: bytes, addr: Any) -> None:
-        self.hub.on_udp_datagram(data, is_reply_sock=True)
+        sender_ip = addr[0] if isinstance(addr, tuple) and addr else None
+        self.hub.on_udp_datagram(data, is_reply_sock=True, sender_ip=sender_ip)
 
     def error_received(self, exc: Exception) -> None:
         pass
@@ -663,6 +665,8 @@ class PitWallHub:
         self.tele_port = tele_port
         self.cmd_host = cmd_host
         self.cmd_port = cmd_port
+        self.auto_game_host = cmd_host in ("127.0.0.1", "localhost", "")
+        self.telemetry_source_ip: Optional[str] = None
         self.token = token
 
         self.sim = DemoRaceSimulator()
@@ -693,13 +697,16 @@ class PitWallHub:
         self.engine.on_radio_emitted = self._on_engine_radio
         os.makedirs(RESULTS_DIR, exist_ok=True)
         self.league_mgr = public_suite.LeagueManager(RESULTS_DIR)
-        self.server_boot_id = f"2.4.1-{int(time.time())}"
+        self.server_boot_id = f"2.4.2-{int(time.time())}"
 
     def _build_snapshot(self) -> Dict[str, Any]:
         snap = self.engine.snapshot()
         snap["connection"]["udp_bind_error"] = self.udp_bind_error
-        snap["connection"]["pitwall_build"] = "2.4.1-motec-obs-showcase"
+        snap["connection"]["pitwall_build"] = "2.4.2-deck-lan-live"
         snap["connection"]["server_boot_id"] = self.server_boot_id
+        snap["connection"]["telemetry_source_ip"] = self.telemetry_source_ip
+        snap["connection"]["cmd_host"] = self.cmd_host
+        snap["connection"]["cmd_port"] = self.cmd_port
         snap["overlay"] = dict(self.overlay_cfg)
         return snap
 
@@ -858,11 +865,24 @@ class PitWallHub:
             if self._winrt_proc is None or self._winrt_proc.returncode is not None:
                 await self._ensure_local_winrt_worker()
 
-    def on_udp_datagram(self, data: bytes, is_reply_sock: bool) -> None:
+    def on_udp_datagram(self, data: bytes, is_reply_sock: bool, sender_ip: Optional[str] = None) -> None:
         try:
             header, body = bc_api.decode(data)
         except bc_api.PacketError:
             return
+        if not is_reply_sock and sender_ip:
+            self.telemetry_source_ip = sender_ip
+            if self.auto_game_host and self.cmd_host != sender_ip:
+                self.cmd_host = sender_ip
+                print(f"[NET] Auto-locked game command target -> {self.cmd_host}:{self.cmd_port}", flush=True)
+                if self.cmd_proto and self.cmd_proto.transport:
+                    try:
+                        self.cmd_proto.transport.sendto(
+                            bc_api.hello_command(1, self.token),
+                            (self.cmd_host, self.cmd_port),
+                        )
+                    except OSError:
+                        pass
         # Auto-yield simulator immediately when real race telemetry arrives!
         if not is_reply_sock and self.sim_enabled:
             self.sim_enabled = False
@@ -1620,7 +1640,7 @@ class PitWallHub:
             await self._send_http(writer, 200, "application/json; charset=utf-8", payload)
             return
 
-        # 4b) Local Wi-Fi / LAN URL helper for iPhone & Co-Op Engineer QR scanning (/api/lan-info)
+        # 4b) Local Wi-Fi / LAN URL helper for Fold / Phone, Steam Deck & Co-Op Engineer (/api/lan-info)
         if method == "GET" and path == "/api/lan-info":
             lan_ip = detect_lan_ip()
             base_url = f"http://{lan_ip}:8765"
@@ -1629,8 +1649,12 @@ class PitWallHub:
                 "lan_url": base_url,
                 "crew_url": f"{base_url}/?role=crew",
                 "obs_url": "http://127.0.0.1:8765/?obs=1",
+                "telemetry_port": self.tele_port,
+                "command_port": self.cmd_port,
+                "telemetry_source_ip": self.telemetry_source_ip,
+                "cmd_host": self.cmd_host,
                 "interactive_desktop": _has_interactive_desktop(),
-                "pitwall_build": "2.4.1-motec-obs-showcase",
+                "pitwall_build": "2.4.2-deck-lan-live",
             }).encode("utf-8")
             await self._send_http(writer, 200, "application/json; charset=utf-8", payload)
             return
@@ -1825,7 +1849,8 @@ class PitWallHub:
                     extra_hdr=f"X-TTS-Cache: {'HIT' if hit else 'LOCAL'}\r\n{persona_line_hdr}",
                 )
             except Exception as exc:
-                await self._send_http(writer, 500, "text/plain", str(exc).encode("utf-8"))
+                code = 503 if sys.platform != "win32" else 500
+                await self._send_http(writer, code, "text/plain", str(exc).encode("utf-8"))
             return
 
         # 6) Static files
@@ -1884,7 +1909,7 @@ async def run_server(args: argparse.Namespace) -> None:
 
     loop.set_exception_handler(quiet_win_connreset)
 
-    # Bind UDP telemetry listener (127.0.0.1:29770)
+    # Bind UDP telemetry listener (default 0.0.0.0:29770 so PC + LAN/Steam Deck both work)
     tele_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     tele_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     disable_windows_udp_connreset(tele_sock)
@@ -1896,21 +1921,22 @@ async def run_server(args: argparse.Namespace) -> None:
         hub.udp_bind_error = f"Port {args.telemetry_port} busy ({exc})"
         tele_sock.close()
 
-    # Bind UDP command socket (ephemeral local port -> sends to game_host:command_port)
+    # Always bind UDP command socket on 0.0.0.0 so commands can reach local 127.0.0.1 or a remote Steam Deck
     cmd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     disable_windows_udp_connreset(cmd_sock)
-    cmd_sock.bind(("127.0.0.1" if args.game_host in ("127.0.0.1", "localhost") else "0.0.0.0", 0))
+    cmd_sock.bind(("0.0.0.0", 0))
     cmd_sock.setblocking(False)
     _, cmd_proto = await loop.create_datagram_endpoint(lambda: CommandUDPProtocol(hub), sock=cmd_sock)
     hub.cmd_proto = cmd_proto  # type: ignore[assignment]
 
+    lan_ip = detect_lan_ip()
     http_srv = await asyncio.start_server(hub.handle_http_or_ws, args.web_host, args.web_port)
     print(f"============================================================")
     print(f" SWOOZ PITWALL — LIVE RACE ENGINEER & TEAM COMMS")
-    print(f" Dashboard URL:       http://{args.web_host}:{args.web_port}")
-    print(f" Telemetry UDP In:    {args.telemetry_ip}:{args.telemetry_port}")
-    print(f" Game Command Out:    {args.game_host}:{args.command_port}")
-    print(f" Race Results Upload: http://{args.web_host}:{args.web_port}/race-results")
+    print(f" Dashboard URL:       http://127.0.0.1:{args.web_port}  (Mobile/LAN: http://{lan_ip}:{args.web_port})")
+    print(f" Telemetry UDP In:    {args.telemetry_ip}:{args.telemetry_port} (Remote Game -> {lan_ip}:{args.telemetry_port})")
+    print(f" Game Command Out:    {args.game_host}:{args.command_port} (auto-locks on incoming game IP)")
+    print(f" Race Results Upload: http://{lan_ip}:{args.web_port}/race-results")
     if hub.udp_bind_error:
         print(f" WARNING: {hub.udp_bind_error}")
     print(f"============================================================", flush=True)
@@ -1935,7 +1961,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Backseat Champions F1 Pit Wall Mission Control")
     parser.add_argument("--web-host", default="0.0.0.0")
     parser.add_argument("--web-port", type=int, default=8765)
-    parser.add_argument("--telemetry-ip", default="127.0.0.1")
+    parser.add_argument("--telemetry-ip", default="0.0.0.0")
     parser.add_argument("--telemetry-port", type=int, default=29770)
     parser.add_argument("--game-host", default="127.0.0.1")
     parser.add_argument("--command-port", type=int, default=29771)
