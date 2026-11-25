@@ -3639,6 +3639,8 @@
         startMicWaveformCapture();
       }
 
+      let idleAndroidCycles = 0;
+
       const startRec = () => {
         if (!micEnabled) return;
         const rec = new SR();
@@ -3647,7 +3649,8 @@
         let lastErrCode = "";
         let hadSpeechResult = false;
         rec.lang = navigator.language && navigator.language.startsWith("en") ? navigator.language : "en-US";
-        rec.continuous = !isAndroidUA;
+        // Keep continuous=true on Android too now that getUserMedia is disabled on mobile (avoids endless start/stop chime loops).
+        rec.continuous = true;
         rec.interimResults = true;
         rec.maxAlternatives = 4;
 
@@ -3655,6 +3658,7 @@
           speechInterimKickUntil = performance.now() + 750;
         };
         rec.onspeechstart = () => {
+          idleAndroidCycles = 0;
           speechInterimKickUntil = performance.now() + 1100;
           updateVoiceBarUI(null, "Listening… speak command");
         };
@@ -3662,6 +3666,7 @@
         rec.onresult = (ev) => {
           if (!micEnabled) return;
           hadSpeechResult = true;
+          idleAndroidCycles = 0;
           speechInterimKickUntil = performance.now() + 650;
           if (interimSettleTimer) {
             clearTimeout(interimSettleTimer);
@@ -3741,7 +3746,16 @@
             interimSettleTimer = null;
           }
           if (micEnabled) {
-            const delayMs = lastErrCode === "network" ? 1200 : lastErrCode === "no-speech" && !hadSpeechResult ? 450 : 60;
+            if (isAndroidUA && !hadSpeechResult) {
+              idleAndroidCycles += 1;
+              if (idleAndroidCycles >= 2) {
+                micEnabled = false;
+                try { localStorage.setItem("bc_mic_auto", "0"); } catch (_) {}
+                updateVoiceBarUI(null, "Mic idle — tap MIC [V] to talk");
+                return;
+              }
+            }
+            const delayMs = lastErrCode === "network" ? 1800 : !hadSpeechResult ? 1200 : 120;
             setTimeout(() => {
               if (micEnabled) {
                 try { startRec(); } catch (_) {}
