@@ -29,6 +29,7 @@
 
   // Web Audio & Single-Voice Concurrency Lock
   let audioCtx = null;
+  let masterRadioGain = null;
   let radioAnalyser = null;
   let radioWaveData = null;
   let activeVoiceSource = null;
@@ -121,9 +122,14 @@
   let voiceConfig = {
     voice: (!savedVoiceInit || savedVoiceInit === "swooz-dom") ? "en-GB-SoniaNeural" : savedVoiceInit,
     fx: localStorage.getItem("bc_fx") || "v10",
-    ratePct: Number(localStorage.getItem("bc_rate") || 8),
-    volume: Number(localStorage.getItem("bc_vol") || 88) / 100,
+    ratePct: Number(localStorage.getItem("bc_rate") ?? 8),
+    volume: Number(localStorage.getItem("bc_vol") ?? 88) / 100,
   };
+
+  function getPerceivedRadioGain() {
+    const lin = Math.max(0, Math.min(1, Number(voiceConfig.volume) || 0));
+    return lin <= 0.005 ? 0 : Math.pow(lin, 2.2);
+  }
 
   // ==================== RESPONSIVE COCKPIT FORM-FACTOR CONTROLLER (PHONE · FOLD · TABLET · PC) ====================
   const initUrlParams = new URLSearchParams(location.search);
@@ -253,13 +259,13 @@
         const gain = ctx.createGain();
         osc.type = "triangle";
         osc.frequency.value = freq;
-        const vol = Math.max(0.025, voiceConfig.volume * 0.09);
+        const vol = 0.09;
         gain.gain.setValueAtTime(vol, now + idx * 0.07);
         gain.gain.exponentialRampToValueAtTime(0.0008, now + idx * 0.07 + 0.09);
         if (panner) {
-          osc.connect(gain).connect(panner).connect(ctx.destination);
+          osc.connect(gain).connect(panner).connect(masterRadioGain);
         } else {
-          osc.connect(gain).connect(ctx.destination);
+          osc.connect(gain).connect(masterRadioGain);
         }
         osc.start(now + idx * 0.07);
         osc.stop(now + idx * 0.07 + 0.095);
@@ -283,6 +289,12 @@
       radioAnalyser = audioCtx.createAnalyser();
       radioAnalyser.fftSize = 256;
       radioWaveData = new Uint8Array(radioAnalyser.frequencyBinCount);
+      masterRadioGain = audioCtx.createGain();
+      masterRadioGain.gain.value = getPerceivedRadioGain();
+      masterRadioGain.connect(audioCtx.destination);
+    }
+    if (masterRadioGain) {
+      masterRadioGain.gain.setTargetAtTime(getPerceivedRadioGain(), audioCtx.currentTime, 0.015);
     }
     if (audioCtx.state === "suspended") audioCtx.resume();
     return audioCtx;
@@ -343,7 +355,7 @@
     try {
       const ctx = ensureAudioCtx();
       const now = ctx.currentTime;
-      const vol = Math.max(0.02, voiceConfig.volume * 0.08);
+      const vol = 0.08;
       [1420, 1840].forEach((freq, idx) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -353,7 +365,7 @@
         gain.gain.exponentialRampToValueAtTime(0.0008, now + idx * 0.06 + 0.055);
         osc.connect(gain);
         gain.connect(radioAnalyser);
-        gain.connect(ctx.destination);
+        gain.connect(masterRadioGain);
         osc.start(now + idx * 0.06);
         osc.stop(now + idx * 0.06 + 0.06);
       });
@@ -376,10 +388,10 @@
       bp.frequency.value = 1950;
       bp.Q.value = 1.6;
       const gain = ctx.createGain();
-      gain.gain.value = 0.065 * voiceConfig.volume * intensity;
+      gain.gain.value = 0.065 * intensity;
       src.connect(bp).connect(gain);
       gain.connect(radioAnalyser);
-      gain.connect(ctx.destination);
+      gain.connect(masterRadioGain);
       src.start();
     } catch (_) {}
   }
@@ -422,7 +434,7 @@
         if (uk) u.voice = uk;
       }
       u.rate = Math.min(1.35, 1.04 + voiceConfig.ratePct / 100);
-      u.volume = voiceConfig.volume;
+      u.volume = getPerceivedRadioGain();
       engineerCurrentSpokenText = msg.toLowerCase();
       offlineSpeakingUntil = performance.now() + Math.max(1400, msg.length * 68);
       let settled = false;
@@ -576,12 +588,13 @@
       pres.gain.value = trim.presDb || 0;
 
       const outGain = ctx.createGain();
-      outGain.gain.value = voiceConfig.volume * (voiceConfig.fx === "clean" ? 1.0 : 1.28);
+      // 90s V10 FX saturator already boosts RMS substantially; normalize trim so FX level matches clean voice.
+      outGain.gain.value = voiceConfig.fx === "clean" ? 1.0 : (voiceConfig.fx === "v10" ? 0.78 : 0.92);
 
       if (voiceConfig.fx === "clean") {
         src.connect(pres).connect(outGain);
         outGain.connect(radioAnalyser);
-        outGain.connect(ctx.destination);
+        outGain.connect(masterRadioGain);
         src.onended = () => {
           if (activeVoiceSource === src) activeVoiceSource = null;
           engineerCurrentSpokenText = "";
@@ -615,11 +628,11 @@
         hissSrc.buffer = hissBuf;
         activeHissSource = hissSrc;
         const hissGain = ctx.createGain();
-        hissGain.gain.value = (isGrit ? 0.020 : 0.007) * voiceConfig.volume;
+        hissGain.gain.value = isGrit ? 0.018 : 0.007;
 
         src.connect(pres).connect(hp).connect(mid).connect(shaper).connect(lp).connect(outGain);
         outGain.connect(radioAnalyser);
-        outGain.connect(ctx.destination);
+        outGain.connect(masterRadioGain);
         hissSrc.connect(hissGain).connect(hp);
         hissSrc.start(ctx.currentTime + 0.015);
         src.onended = () => {
@@ -2600,6 +2613,9 @@
     rngVol.addEventListener("input", () => {
       voiceConfig.volume = Number(rngVol.value) / 100;
       localStorage.setItem("bc_vol", rngVol.value);
+      if (masterRadioGain && audioCtx) {
+        masterRadioGain.gain.setTargetAtTime(getPerceivedRadioGain(), audioCtx.currentTime, 0.015);
+      }
     });
     document.getElementById("btn-voice-sample").addEventListener("click", auditionCurrentVoice);
 
